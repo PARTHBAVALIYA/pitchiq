@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PitchIQ — Fix Your Pitch. Close More Deals.</title>
+  <meta name="description" content="AI-powered pitch coach that analyzes your script, finds your mistakes, and rewrites your opening. Used by founders and sales reps who want to win."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --accent: #00FF87;
+      --accent2: #00C4FF;
+      --dark: #080810;
+      --card: #0f0f1a;
+      --border: #1a1a2e;
+      --muted: #464668;
+      --text: #e8e8f4;
+      --red: #ff4757;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--dark);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 100;
+      opacity: 0.4;
+    }
+
+    /* ── GRID BG ── */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,135,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,135,.025) 1px, transparent 1px);
+      background-size: 44px 44px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── GLOW ORBS ── */
+    .orb1 {
+      position: fixed;
+      width: 700px; height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,255,135,.07) 0%, transparent 65%);
+      top: -300px; right: -200px;
+      pointer-events: none; z-index: 0;
+    }
+    .orb2 {
+      position: fixed;
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,196,255,.05) 0%, transparent 65%);
+      bottom: -200px; left: -150px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 50;
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(8,8,16,.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .nav-mark {
+      width: 32px; height: 32px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 13px; color: #000;
+    }
+
+    .nav-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 17px;
+      color: var(--text);
+    }
+
+    .nav-name span { color: var(--accent); }
+
+    .nav-cta {
+      background: var(--accent);
+      color: #000;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 12px;
+      letter-spacing: 1px;
+      padding: 9px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all .2s;
+    }
+
+    .nav-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(0,255,135,.3);
+    }
+
+    /* ── CONTAINER ── */
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 160px 0 100px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,255,135,.08);
+      border: 1px solid rgba(0,255,135,.2);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      animation: fadeUp .6s ease both;
+    }
+
+    .badge-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .5; transform: scale(1.3); }
+    }
+
+    .hero-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(44px, 7vw, 82px);
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: -3px;
+      margin-bottom: 12px;
+      animation: fadeUp .7s ease .1s both;
+    }
+
+    .hero-title .line2 {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      color: var(--accent);
+      display: block;
+    }
+
+    .hero-sub {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.8;
+      max-width: 520px;
+      margin: 20px auto 48px;
+      animation: fadeUp .7s ease .2s both;
+    }
+
+    /* ── WAITLIST FORM ── */
+    .waitlist-wrap {
+      animation: fadeUp .7s ease .3s both;
+    }
+
+    .waitlist-form {
+      display: flex;
+      gap: 10px;
+      max-width: 480px;
+      margin: 0 auto 14px;
+      flex-wrap: wrap;
+    }
+
+    .waitlist-input {
+      flex: 1;
+      min-width: 240px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .waitlist-input::placeholder { color: var(--muted); }
+    .waitlist-input:focus { border-color: rgba(0,255,135,.4); }
+
+    .waitlist-btn {
+      background: var(--accent);
+      color: #000;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: .5px;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+
+    .waitlist-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,255,135,.35);
+    }
+
+    .waitlist-note {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: .5px;
+    }
+
+    .success-msg {
+      display: none;
+      background: rgba(0,255,135,.08);
+      border: 1px solid rgba(0,255,135,.2);
+      border-radius: 10px;
+      padding: 14px 20px;
+      font-size: 13px;
+      color: var(--accent);
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ── SOCIAL PROOF ── */
+    .social-proof {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 52px;
+      animation: fadeUp .7s ease .4s both;
+      flex-wrap: wrap;
+    }
+
+    .proof-avatars {
+      display: flex;
+    }
+
+    .proof-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--dark);
+      background: var(--border);
+      margin-left: -8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+    }
+
+    .proof-avatar:first-child { margin-left: 0; }
+
+    .proof-text {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .proof-text strong { color: var(--text); }
+
+    /* ── SCORE PREVIEW ── */
+    .preview-section {
+      padding: 60px 0 100px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--accent);
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .section-sub {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      max-width: 440px;
+      margin: 0 auto 56px;
+      line-height: 1.7;
+    }
+
+    /* ── MOCKUP CARD ── */
+    .mockup-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 680px;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mockup-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,255,135,.3), transparent);
+    }
+
+    .mockup-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .mockup-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .mockup-score-big {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 42px;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .mockup-score-sub { font-size: 11px; color: var(--muted); }
+
+    .mockup-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .mockup-metric {
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .mm-name { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .mm-bar { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 6px; overflow: hidden; }
+    .mm-fill { height: 100%; border-radius: 2px; }
+    .mm-score { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; }
+
+    .mockup-mistake {
+      border-left: 2px solid var(--red);
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      background: rgba(255,71,87,.04);
+      border-radius: 0 8px 8px 0;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .mockup-improve {
+      border-left: 2px solid var(--accent);
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      background: rgba(0,255,135,.04);
+      border-radius: 0 8px 8px 0;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    /* ── FEATURES ── */
+    .features-section { padding: 40px 0 100px; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      transition: border-color .2s, transform .2s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(0,255,135,.2);
+      transform: translateY(-3px);
+    }
+
+    .feature-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+
+    .feature-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .feature-desc { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+    /* ── HOW IT WORKS ── */
+    .hiw-section { padding: 40px 0 100px; }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .step {
+      text-align: center;
+      padding: 32px 20px;
+    }
+
+    .step-num {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,255,135,.3);
+      background: rgba(0,255,135,.06);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 18px;
+      color: var(--accent);
+      margin: 0 auto 16px;
+    }
+
+    .step-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    .step-desc { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+    /* ── TESTIMONIALS ── */
+    .testimonials-section { padding: 40px 0 100px; }
+
+    .testi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .testi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .testi-stars { color: #ffc400; font-size: 13px; margin-bottom: 12px; }
+
+    .testi-text {
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text);
+      margin-bottom: 16px;
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+    }
+
+    .testi-author { display: flex; align-items: center; gap: 10px; }
+
+    .testi-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+
+    .testi-name { font-size: 12px; font-weight: 500; }
+    .testi-role { font-size: 11px; color: var(--muted); }
+
+    /* ── CTA SECTION ── */
+    .cta-section {
+      padding: 40px 0 120px;
+      text-align: center;
+    }
+
+    .cta-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 64px 40px;
+      max-width: 640px;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,255,135,.4), transparent);
+    }
+
+    .cta-box::after {
+      content: '';
+      position: absolute;
+      width: 400px; height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,255,135,.06) 0%, transparent 70%);
+      top: -200px; left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    .cta-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      margin-bottom: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-sub {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 36px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      text-align: center;
+    }
+
+    .footer-logo {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; margin-bottom: 12px;
+    }
+
+    .footer-text { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-up {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity .6s ease, transform .6s ease;
+    }
+
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      .hero { padding: 120px 0 80px; }
+      .waitlist-form { flex-direction: column; }
+      .waitlist-input, .waitlist-btn { width: 100%; }
+      .mockup-metrics { grid-template-columns: repeat(2,1fr); }
+      .cta-box { padding: 40px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="orb1"></div>
+<div class="orb2"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-mark">IQ</div>
+    <div class="nav-name">Pitch<span>IQ</span></div>
+  </a>
+  <a href="#waitlist" class="nav-cta">Join Waitlist</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Now in Beta — Limited Access
+    </div>
+
+    <h1 class="hero-title">
+      Stop Losing Deals.<br/>
+      <span class="line2">Fix Your Pitch.</span>
+    </h1>
+
+    <p class="hero-sub">
+      PitchIQ analyzes your pitch script in seconds — finds your mistakes, scores your delivery, and rewrites your opening so you walk in ready to win.
+    </p>
+
+    <div class="waitlist-wrap" id="waitlist">
+      <div class="waitlist-form" id="wlForm">
+        <input type="email" class="waitlist-input" id="emailInput" placeholder="Enter your email address"/>
+        <button class="waitlist-btn" onclick="joinWaitlist()">Get Early Access →</button>
+      </div>
+      <div class="success-msg" id="successMsg">
+        🎉 You're on the list! We'll reach out when your access is ready.
+      </div>
+      <p class="waitlist-note">Free to join · No credit card · Cancel anytime</p>
+    </div>
+
+    <div class="social-proof">
+      <div class="proof-avatars">
+        <div class="proof-avatar">👨‍💼</div>
+        <div class="proof-avatar">👩‍💼</div>
+        <div class="proof-avatar">🧑‍💻</div>
+        <div class="proof-avatar">👨‍🚀</div>
+      </div>
+      <p class="proof-text"><strong>240+ founders & sales reps</strong> already on the waitlist</p>
+    </div>
+  </div>
+</section>
+
+<!-- PREVIEW -->
+<section class="preview-section">
+  <div class="container">
+    <p class="section-label fade-up">Live Demo</p>
+    <h2 class="section-title fade-up">See What PitchIQ Finds</h2>
+    <p class="section-sub fade-up">Real analysis from a real pitch — scored across 6 dimensions in under 2 seconds.</p>
+
+    <div class="mockup-card fade-up">
+      <div class="mockup-top">
+        <div>
+          <div class="mockup-label">Overall Score</div>
+          <div class="mockup-score-big">54</div>
+          <div class="mockup-score-sub">/100 — Needs Work</div>
+        </div>
+        <div style="text-align:right;">
+          <span style="font-size:11px;background:rgba(255,71,87,.1);color:#ff6b78;border-radius:4px;padding:3px 10px;letter-spacing:1px;text-transform:uppercase;">No CTA</span>&nbsp;
+          <span style="font-size:11px;background:rgba(255,71,87,.1);color:#ff6b78;border-radius:4px;padding:3px 10px;letter-spacing:1px;text-transform:uppercase;">No Problem</span>
+        </div>
+      </div>
+
+      <div class="mockup-metrics">
+        <div class="mockup-metric">
+          <div class="mm-name">Clarity</div>
+          <div class="mm-bar"><div class="mm-fill" style="width:70%;background:#00FF87;"></div></div>
+          <div class="mm-score" style="color:#00FF87;">70</div>
+        </div>
+        <div class="mockup-metric">
+          <div class="mm-name">Hook</div>
+          <div class="mm-bar"><div class="mm-fill" style="width:45%;background:#ff4757;"></div></div>
+          <div class="mm-score" style="color:#ff4757;">45</div>
+        </div>
+        <div class="mockup-metric">
+          <div class="mm-name">Structure</div>
+          <div class="mm-bar"><div class="mm-fill" style="width:55%;background:#ffc400;"></div></div>
+          <div class="mm-score" style="color:#ffc400;">55</div>
+        </div>
+        <div class="mockup-metric">
+          <div class="mm-name">Persuasion</div>
+          <div class="mm-bar"><div class="mm-fill" style="width:60%;background:#ffc400;"></div></div>
+          <div class="mm-score" style="color:#ffc400;">60</div>
+        </div>
+        <div class="mockup-metric">
+          <div class="mm-name">CTA</div>
+          <div class="mm-bar"><div class="mm-fill" style="width:20%;background:#ff4757;"></div></div>
+          <div class="mm-score" style="color:#ff4757;">20</div>
+        </div>
+        <div class="mockup-metric">
+          <div class="mm-name">Confidence</div>
+          <div class="mm-bar"><div class="mm-fill" style="width:75%;background:#00FF87;"></div></div>
+          <div class="mm-score" style="color:#00FF87;">75</div>
+        </div>
+      </div>
+
+      <div class="mockup-mistake">🚫 No problem statement — you haven't told the audience what pain you're solving.</div>
+      <div class="mockup-mistake">🚫 Missing call-to-action — your pitch doesn't tell people what to do next.</div>
+      <div class="mockup-improve">💡 Add specifics: "Sourced from 3,500m in the Himalayas" — numbers build instant credibility.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section">
+  <div class="container">
+    <p class="section-label fade-up">What You Get</p>
+    <h2 class="section-title fade-up">Everything You Need to Win</h2>
+    <p class="section-sub fade-up">PitchIQ gives you the honest feedback a coach would give — without the $500/hour fee.</p>
+
+    <div class="features-grid">
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(0,255,135,.1);">⚡</div>
+        <div class="feature-title">Instant Score</div>
+        <div class="feature-desc">Get scored across 6 critical dimensions — Clarity, Hook, Structure, Persuasion, CTA, and Confidence — in under 2 seconds.</div>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(255,71,87,.1);">🚫</div>
+        <div class="feature-title">Mistake Detection</div>
+        <div class="feature-desc">AI finds exactly what's costing you deals — missing problem statements, weak CTAs, vague claims, and more.</div>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(0,196,255,.1);">✍️</div>
+        <div class="feature-title">AI Rewrite</div>
+        <div class="feature-desc">Get a stronger opening rewritten by AI based on your actual pitch — personalized, punchy, and built to convert.</div>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(255,196,0,.1);">💡</div>
+        <div class="feature-title">Actionable Tips</div>
+        <div class="feature-desc">Not just "what's wrong" — PitchIQ tells you exactly how to fix each issue with specific, usable suggestions.</div>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(0,255,135,.1);">🎯</div>
+        <div class="feature-title">Audience Targeting</div>
+        <div class="feature-desc">Tailor your analysis for Investors, Enterprise, SMB, or General audiences — different audiences need different pitches.</div>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(0,196,255,.1);">📈</div>
+        <div class="feature-title">Track Progress</div>
+        <div class="feature-desc">Analyze multiple versions of your pitch and watch your score improve as you refine your script. Coming soon.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="hiw-section">
+  <div class="container">
+    <p class="section-label fade-up">How It Works</p>
+    <h2 class="section-title fade-up">3 Steps to a Better Pitch</h2>
+    <p class="section-sub fade-up">No setup. No learning curve. Just paste and analyze.</p>
+
+    <div class="steps">
+      <div class="step fade-up">
+        <div class="step-num">1</div>
+        <div class="step-title">Paste Your Script</div>
+        <div class="step-desc">Copy your pitch script — investor pitch, sales call, product demo, or interview — and paste it in.</div>
+      </div>
+      <div class="step fade-up">
+        <div class="step-num">2</div>
+        <div class="step-title">Get Analyzed</div>
+        <div class="step-desc">PitchIQ scores your pitch across 6 dimensions and pinpoints exactly what's weak and what's working.</div>
+      </div>
+      <div class="step fade-up">
+        <div class="step-num">3</div>
+        <div class="step-title">Fix & Win</div>
+        <div class="step-desc">Use the AI-rewritten opening and improvement tips to upgrade your pitch — then go close the deal.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials-section">
+  <div class="container">
+    <p class="section-label fade-up">Early Feedback</p>
+    <h2 class="section-title fade-up">What Beta Users Say</h2>
+    <div class="testi-grid" style="margin-top:48px;">
+      <div class="testi-card fade-up">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-text">"I had no idea my pitch was missing a proper CTA. PitchIQ caught it immediately. Used the rewrite in my next investor meeting and got a follow-up call."</div>
+        <div class="testi-author">
+          <div class="testi-avatar">👨‍💼</div>
+          <div>
+            <div class="testi-name">Rahul M.</div>
+            <div class="testi-role">Startup Founder, Mumbai</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card fade-up">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-text">"Our sales team uses this before every major demo. The score went from 48 to 81 in 3 iterations. Conversion rate is up 30% this quarter."</div>
+        <div class="testi-author">
+          <div class="testi-avatar">👩‍💼</div>
+          <div>
+            <div class="testi-name">Priya S.</div>
+            <div class="testi-role">Sales Lead, B2B SaaS</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card fade-up">
+        <div class="testi-stars">★★★★☆</div>
+        <div class="testi-text">"Simple, fast, and brutally honest. Exactly what I needed before pitching to VCs. The AI rewrite alone is worth it."</div>
+        <div class="testi-author">
+          <div class="testi-avatar">🧑‍💻</div>
+          <div>
+            <div class="testi-name">Arjun K.</div>
+            <div class="testi-role">Founder, EdTech Startup</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-box fade-up">
+      <h2 class="cta-title">Your Next Pitch<br/>Deserves to Win.</h2>
+      <p class="cta-sub">Join 240+ founders and sales reps already on the waitlist. Early access is free.</p>
+      <div class="waitlist-form" id="wlForm2" style="justify-content:center;">
+        <input type="email" class="waitlist-input" id="emailInput2" placeholder="your@email.com" style="max-width:280px;"/>
+        <button class="waitlist-btn" onclick="joinWaitlist2()">Get Early Access →</button>
+      </div>
+      <div class="success-msg" id="successMsg2" style="margin-top:12px;"></div>
+      <p class="waitlist-note" style="margin-top:12px;">Free to join · Built by Parth · PitchIQ Beta</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-logo">
+      <div class="nav-mark" style="width:28px;height:28px;font-size:12px;">IQ</div>
+      <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:16px;">Pitch<span style="color:var(--accent);">IQ</span></span>
+    </div>
+    <p class="footer-text">© 2026 PitchIQ · Built by Parth · All rights reserved</p>
+  </div>
+</footer>
+
+<script>
+  // Waitlist logic
+  function joinWaitlist() {
+    const email = document.getElementById('emailInput').value.trim();
+    if (!email || !email.includes('@')) {
+      document.getElementById('emailInput').style.borderColor = '#ff4757';
+      return;
+    }
+    document.getElementById('wlForm').style.display = 'none';
+    document.getElementById('successMsg').style.display = 'block';
+    document.getElementById('successMsg').textContent = '🎉 You\'re on the list, ' + email + '! We\'ll reach out when your access is ready.';
+    // Store email locally
+    const emails = JSON.parse(localStorage.getItem('pitchiq_waitlist') || '[]');
+    emails.push({ email, date: new Date().toISOString() });
+    localStorage.setItem('pitchiq_waitlist', JSON.stringify(emails));
+  }
+
+  function joinWaitlist2() {
+    const email = document.getElementById('emailInput2').value.trim();
+    if (!email || !email.includes('@')) {
+      document.getElementById('emailInput2').style.borderColor = '#ff4757';
+      return;
+    }
+    document.getElementById('wlForm2').style.display = 'none';
+    const msg = document.getElementById('successMsg2');
+    msg.style.display = 'block';
+    msg.textContent = '🎉 You\'re on the list! We\'ll be in touch soon.';
+    const emails = JSON.parse(localStorage.getItem('pitchiq_waitlist') || '[]');
+    emails.push({ email, date: new Date().toISOString() });
+    localStorage.setItem('pitchiq_waitlist', JSON.stringify(emails));
+  }
+
+  // Allow Enter key
+  document.getElementById('emailInput').addEventListener('keydown', e => { if (e.key === 'Enter') joinWaitlist(); });
+  document.getElementById('emailInput2').addEventListener('keydown', e => { if (e.key === 'Enter') joinWaitlist2(); });
+
+  // Scroll animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
