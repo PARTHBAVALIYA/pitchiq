@@ -163,6 +163,18 @@ export default function App() {
     }
   }, [pitchHistory]);
 
+  // Lock background scroll when any modal is open
+  useEffect(() => {
+    if (showReportModal || showAuthModal || showHowItWorks) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showReportModal, showAuthModal, showHowItWorks]);
+
   const wordCount = pitch.trim().split(/\s+/).filter(Boolean).length;
 
   // ── Working Database Authentication Handlers ──
