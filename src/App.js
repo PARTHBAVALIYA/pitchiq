@@ -61,9 +61,7 @@ export default function App() {
       {/* ── Navigation ── */}
       <nav className="nav">
         <span className="brand">PitchIQ</span>
-        <span className="nav-center">
-          Silver Oak University &bull; M2_CSE_027 &bull; Guide: Prof. Hemali Patel
-        </span>
+        <span className="nav-tagline">AI-Powered Pitch Analysis</span>
         <button className="nav-ghost" onClick={() => setShowCorpus(true)}>
           Deal Database ({SHARK_TANK_CORPUS.length})
         </button>
@@ -74,7 +72,6 @@ export default function App() {
 
         {/* ── Left: Editor Column ── */}
         <aside className="editor-col">
-          <p className="col-heading">PITCH SCRIPT</p>
 
           {/* Code-editor style textarea */}
           <div className="editor-box">
@@ -107,7 +104,6 @@ export default function App() {
 
           {/* Preset Scenarios */}
           <div className="preset-section">
-            <p className="preset-heading">TEST SCENARIOS</p>
             <div className="preset-grid">
               {PRESET_PITCHES.map((p, i) => (
                 <button key={i} className="preset-btn" onClick={() => handlePreset(p)}>
@@ -139,7 +135,7 @@ export default function App() {
 
           {/* Card 1 — Investability Score */}
           <div className="card score-card">
-            <p className="card-label">INVESTABILITY SCORE</p>
+            <p className="card-label">Score</p>
             {score !== null ? (
               <>
                 <div className="big-num" style={{ color: scoreAccent }}>
@@ -174,7 +170,7 @@ export default function App() {
 
           {/* Card 2 — Venture Precedent Match */}
           <div className="card match-card">
-            <p className="card-label">VENTURE PRECEDENT MATCH (RAG)</p>
+            <p className="card-label">Venture Match</p>
             {result ? (
               <>
                 <table className="match-table">
@@ -244,7 +240,7 @@ export default function App() {
 
           {/* Card 3 — 6-Factor Analysis */}
           <div className="card metrics-card">
-            <p className="card-label">6-FACTOR ANALYSIS</p>
+            <p className="card-label">Analysis</p>
             <div className="metric-list">
               {result
                 ? Object.entries(result.metrics).map(([name, val]) => (
@@ -278,7 +274,7 @@ export default function App() {
           {/* Card 4 — Investor Panel & Revised Script */}
           <div className="card reactions-card">
             <div className="card-label-row">
-              <p className="card-label">INVESTOR PANEL REACTIONS</p>
+              <p className="card-label">Investor Reactions</p>
               {result && (
                 <button className="copy-btn" onClick={handleCopy}>
                   {copied ? 'Copied \u2713' : 'Copy Revised Script'}
@@ -379,8 +375,8 @@ export default function App() {
 
       {/* ── Footer ── */}
       <footer className="footer">
-        <span>PitchIQ v2.0 &bull; Project ID: M2_CSE_027 &bull; Dept. of Computer Engineering, Silver Oak University</span>
-        <span>Hosted on Vercel Edge Serverless</span>
+        <span>PitchIQ v2.0 &bull; AI Pitch Analysis Platform</span>
+        <span>Powered by Shark Tank Case-Based Retrieval</span>
       </footer>
     </div>
   );
