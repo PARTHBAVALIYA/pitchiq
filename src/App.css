@@ -2021,6 +2021,18 @@ button {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
+.auth-error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  line-height: 1.4;
+}
+
 .auth-submit-btn {
   background: var(--accent-gradient);
   color: #ffffff;

@@ -2,6 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { analyzePitch, PRESET_PITCHES } from './analyzer';
 import { VENTURE_DEAL_CORPUS } from './data/sharkTankCorpus';
 import { extractTextFromPDF, analyzePitchDeck } from './pdfDeckAnalyzer';
+import {
+  openDatabase,
+  dbRegisterUser,
+  dbAuthenticateUser,
+  dbGetSavedPitches,
+  dbSavePitch,
+  dbDeletePitch,
+  dbGetHistory,
+  dbSaveHistoryAttempt
+} from './userDatabase';
 import './App.css';
 
 // Initial seed history for immediate demonstration
@@ -79,6 +89,8 @@ export default function App() {
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authName, setAuthName] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   // Input Mode: 'text' or 'pdf'
@@ -157,7 +169,31 @@ export default function App() {
 
   const fileInputRef = useRef(null);
 
-  // Save history to localStorage
+  // 1. Initialize IndexedDB working database on mount
+  useEffect(() => {
+    openDatabase().catch(console.warn);
+  }, []);
+
+  // 2. Sync user-specific history and saved pitches from working database
+  useEffect(() => {
+    if (!currentUser?.email) return;
+
+    dbGetHistory(currentUser.email).then(history => {
+      if (history && history.length > 0) {
+        setPitchHistory(history);
+        setCompareRevA(Math.max(0, history.length - 2));
+        setCompareRevB(history.length - 1);
+      }
+    }).catch(console.warn);
+
+    dbGetSavedPitches(currentUser.email).then(saved => {
+      if (saved && saved.length > 0) {
+        setSavedPitches(saved);
+      }
+    }).catch(console.warn);
+  }, [currentUser?.email]);
+
+  // Save history to localStorage fast cache
   useEffect(() => {
     try {
       localStorage.setItem('pitchiq_history', JSON.stringify(pitchHistory));
@@ -168,30 +204,65 @@ export default function App() {
 
   const wordCount = pitch.trim().split(/\s+/).filter(Boolean).length;
 
-  // ── Authentication Handlers ──
-  const handleAuthSubmit = (e) => {
+  // ── Working Database Authentication Handlers ──
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    if (!authEmail) return;
-    const user = {
-      name: authName.trim() || authEmail.split('@')[0],
-      email: authEmail.trim()
-    };
-    setCurrentUser(user);
-    localStorage.setItem('pitchiq_auth_user', JSON.stringify(user));
-    setShowAuthModal(false);
-    setAuthEmail('');
-    setAuthPassword('');
-    setAuthName('');
+    setAuthError('');
+    if (!authEmail.trim() || !authPassword) {
+      setAuthError('Please enter both email and password.');
+      return;
+    }
+
+    setAuthLoading(true);
+    try {
+      let user;
+      if (authMode === 'signup') {
+        if (!authName.trim()) {
+          setAuthError('Please enter your full name.');
+          setAuthLoading(false);
+          return;
+        }
+        user = await dbRegisterUser(authName, authEmail, authPassword);
+      } else {
+        user = await dbAuthenticateUser(authEmail, authPassword);
+      }
+
+      setCurrentUser(user);
+      localStorage.setItem('pitchiq_auth_user', JSON.stringify(user));
+      setShowAuthModal(false);
+      setAuthEmail('');
+      setAuthPassword('');
+      setAuthName('');
+      setAuthError('');
+    } catch (err) {
+      setAuthError(err.message || 'Authentication error.');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
-  const handleDemoLogin = (name, email) => {
-    const user = {
-      name,
-      email
-    };
-    setCurrentUser(user);
-    localStorage.setItem('pitchiq_auth_user', JSON.stringify(user));
-    setShowAuthModal(false);
+  const handleDemoLogin = async (name, email) => {
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      let user;
+      try {
+        user = await dbAuthenticateUser(email, 'password123');
+      } catch {
+        user = await dbRegisterUser(name, email, 'password123');
+      }
+      setCurrentUser(user);
+      localStorage.setItem('pitchiq_auth_user', JSON.stringify(user));
+      setShowAuthModal(false);
+      setAuthError('');
+    } catch {
+      const fallbackUser = { id: `usr_${Date.now()}`, name, email };
+      setCurrentUser(fallbackUser);
+      localStorage.setItem('pitchiq_auth_user', JSON.stringify(fallbackUser));
+      setShowAuthModal(false);
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -255,6 +326,11 @@ export default function App() {
       setCompareRevA(Math.max(0, updatedHistory.length - 2));
       setCompareRevB(updatedHistory.length - 1);
 
+      // Save to working database
+      if (currentUser?.email) {
+        dbSaveHistoryAttempt(currentUser.email, newAttempt).catch(console.warn);
+      }
+
       setLoading(false);
       setActiveTab('results');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -276,7 +352,7 @@ export default function App() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSaveCurrentPitch = () => {
+  const handleSaveCurrentPitch = async () => {
     const newPitch = {
       id: `p-${Date.now()}`,
       title: pitch.slice(0, 32).trim() + '...',
@@ -288,6 +364,18 @@ export default function App() {
     setSavedPitches([newPitch, ...savedPitches]);
     setSaveSuccessMsg(true);
     setTimeout(() => setSaveSuccessMsg(false), 2500);
+
+    // Save to working database
+    if (currentUser?.email) {
+      await dbSavePitch(currentUser.email, newPitch);
+    }
+  };
+
+  const handleDeletePitch = async (pitchId) => {
+    setSavedPitches(savedPitches.filter(p => p.id !== pitchId));
+    if (currentUser?.email) {
+      await dbDeletePitch(currentUser.email, pitchId);
+    }
   };
 
   // Restore earlier revision to editor
@@ -410,8 +498,14 @@ export default function App() {
                 />
               </div>
 
-              <button type="submit" className="auth-submit-btn">
-                {authMode === 'signup' ? 'Create Account' : 'Sign In'}
+              {authError && (
+                <div className="auth-error-banner">
+                  ⚠️ {authError}
+                </div>
+              )}
+
+              <button type="submit" className="auth-submit-btn" disabled={authLoading}>
+                {authLoading ? 'Processing...' : authMode === 'signup' ? 'Create Account' : 'Sign In'}
               </button>
 
               <div className="auth-divider">
@@ -432,16 +526,6 @@ export default function App() {
                   onClick={() => handleDemoLogin('Akshat Solanki', 'akshat@pitchiq.ai')}
                 >
                   👤 Sign in as Akshat
-                </button>
-              </div>
-
-              <div className="guest-explore-row">
-                <button
-                  type="button"
-                  className="guest-explore-btn"
-                  onClick={() => handleDemoLogin('Guest', 'guest@pitchiq.ai')}
-                >
-                  Or explore as Guest
                 </button>
               </div>
             </form>
@@ -1438,7 +1522,7 @@ export default function App() {
                             <button
                               className="action-icon-btn"
                               title="Delete"
-                              onClick={() => setSavedPitches(savedPitches.filter(p => p.id !== saved.id))}
+                              onClick={() => handleDeletePitch(saved.id)}
                             >
                               🗑️
                             </button>
@@ -1684,8 +1768,14 @@ export default function App() {
                 />
               </div>
 
-              <button type="submit" className="auth-submit-btn">
-                {authMode === 'login' ? 'Sign In' : 'Create Account'}
+              {authError && (
+                <div className="auth-error-banner">
+                  ⚠️ {authError}
+                </div>
+              )}
+
+              <button type="submit" className="auth-submit-btn" disabled={authLoading}>
+                {authLoading ? 'Processing...' : authMode === 'login' ? 'Sign In' : 'Create Account'}
               </button>
 
               <div className="auth-divider">
