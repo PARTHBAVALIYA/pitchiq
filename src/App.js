@@ -1,127 +1,276 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { analyzePitch, PRESET_PITCHES } from './analyzer';
 import { VENTURE_DEAL_CORPUS } from './data/sharkTankCorpus';
-import { saveSubscriberEmail } from './supabaseClient';
+import { extractTextFromPDF, analyzePitchDeck } from './pdfDeckAnalyzer';
 import './App.css';
 
-const INITIAL_SAVED_PITCHES = [
+// Initial seed history for immediate viva demonstration
+const DEFAULT_USER = {
+  name: 'Akshat Solanki',
+  email: 'akshat@silveroak.edu.in',
+  role: 'Founder / Student',
+  projectId: 'M2_CSE_027',
+  university: 'Silver Oak University'
+};
+
+const INITIAL_HISTORY = [
   {
-    id: 'p-1',
-    title: 'PitchIQ - Main Pitch',
-    snippet: 'Did you know enterprise sales teams waste 15 hours a week manually prepping discovery pitches?...',
-    score: 79,
-    status: 'Analysed',
-    lastUpdated: '2 days ago',
-    scoreType: 'high'
+    id: 'rev-1',
+    attemptNumber: 1,
+    timestamp: '10:14 AM',
+    date: 'Yesterday',
+    pitchTitle: 'Early Concept Draft',
+    pitchText: 'Our product is really amazing and has incredible goodness. We are the best team out there and our solution is completely unique and special in the market. Everyone who has seen it really likes it and we know you will love it too.',
+    score: 48,
+    verdict: 'High Rejection Risk: Institutional investors would pass due to lack of problem framing and missing traction.',
+    metrics: {
+      'Clarity & Logic': 40,
+      'Opening Hook': 25,
+      'Rhetorical Structure': 35,
+      'Persuasion & Proof': 30,
+      'Call-to-Action': 20,
+      'Investor Confidence': 35
+    }
   },
   {
-    id: 'p-2',
-    title: 'Consumer Beverage Brand',
-    snippet: 'Hi, I\'m Parth, founder of King Water company. We bring pure Himalayan spring water infused with natural gold dust...',
-    score: 64,
-    status: 'Analysed',
-    lastUpdated: '5 days ago',
-    scoreType: 'mid'
+    id: 'rev-2',
+    attemptNumber: 2,
+    timestamp: '02:30 PM',
+    date: 'Yesterday',
+    pitchTitle: 'Revised with Problem Framing',
+    pitchText: 'Hi, I\'m Parth, founder of King Water company. We bring pure Himalayan spring water infused with natural gold dust to help athletes and busy professionals feel refreshed and maintain lasting energy throughout the day. Our water is naturally mineral-rich, providing unmatched purity and better health without any artificial chemicals. Try our first batch today and feel the difference.',
+    score: 68,
+    verdict: 'Promising Concept: Strong foundational value, but needs harder unit economics and a more decisive closing ask.',
+    metrics: {
+      'Clarity & Logic': 70,
+      'Opening Hook': 55,
+      'Rhetorical Structure': 70,
+      'Persuasion & Proof': 50,
+      'Call-to-Action': 65,
+      'Investor Confidence': 65
+    }
   },
   {
-    id: 'p-3',
-    title: 'Hardware IoT Pitch',
-    snippet: 'How many times have you lost your keys or phone right when you are running late for an important meeting?...',
-    score: 72,
-    status: 'Analysed',
-    lastUpdated: '1 week ago',
-    scoreType: 'high'
-  },
-  {
-    id: 'p-4',
-    title: 'Early Draft - AI Platform',
-    snippet: 'We are building a next-generation neural copilot for automated sales calls and customer insights...',
-    score: null,
-    status: 'Draft',
-    lastUpdated: '1 week ago',
-    scoreType: 'draft'
-  },
-  {
-    id: 'p-5',
-    title: 'Revised Pitch - Series A',
-    snippet: 'With $480k in ARR and 140% net dollar retention, we are raising $1.5M to dominate the enterprise sales intelligence market...',
-    score: 81,
-    status: 'Analysed',
-    lastUpdated: '2 weeks ago',
-    scoreType: 'high'
+    id: 'rev-3',
+    attemptNumber: 3,
+    timestamp: '06:45 PM',
+    date: 'Today',
+    pitchTitle: 'Investment-Ready B2B SaaS',
+    pitchText: 'Did you know enterprise sales teams waste 15 hours a week manually prepping discovery pitches? Hi, I\'m Parth, founder of PitchIQ. We build an automated speech coaching platform that analyzes sales scripts against 200+ funded venture deals. We already have 1,400 active sales reps, $24,000 in monthly recurring revenue, and 78% gross margins. We are raising $250,000 for 10% equity to scale our enterprise pipeline. Join us today.',
+    score: 84,
+    verdict: 'Investment-Ready: Exceptional balance of hook, quantifiable proof, and commercial viability.',
+    metrics: {
+      'Clarity & Logic': 85,
+      'Opening Hook': 85,
+      'Rhetorical Structure': 85,
+      'Persuasion & Proof': 85,
+      'Call-to-Action': 90,
+      'Investor Confidence': 90
+    }
   }
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'results' | 'database' | 'saved'
+  // Navigation & User State
+  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'results' | 'deck_results' | 'database' | 'history' | 'saved'
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('pitchiq_auth_user');
+      return stored ? JSON.parse(stored) : DEFAULT_USER;
+    } catch {
+      return DEFAULT_USER;
+    }
+  });
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  // Input Mode: 'text' or 'pdf'
+  const [inputMode, setInputMode] = useState('text'); // 'text' | 'pdf'
   const [pitch, setPitch] = useState(PRESET_PITCHES[0].text);
   const [selectedPreset, setSelectedPreset] = useState(0);
+
+  // PDF Deck Upload State
+  const [pdfFile, setPdfFile] = useState(null);
+  const [pdfParsing, setPdfParsing] = useState(false);
+  const [deckAnalysis, setDeckAnalysis] = useState(null);
+
+  // Analysis Result & History
   const [result, setResult] = useState(() => analyzePitch(PRESET_PITCHES[0].text, 'Investor Pitch', 'Investors'));
   const [loading, setLoading] = useState(false);
-  const [showNewsletter, setShowNewsletter] = useState(false);
-  const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [hasSubscribed, setHasSubscribed] = useState(() => Boolean(localStorage.getItem('pitchiq_newsletter_joined')));
   const [copied, setCopied] = useState(false);
-  const [savedPitches, setSavedPitches] = useState(INITIAL_SAVED_PITCHES);
-  const [savedFilter, setSavedFilter] = useState('all'); // 'all' | 'drafts' | 'analysed'
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  // History State
+  const [pitchHistory, setPitchHistory] = useState(() => {
+    try {
+      const stored = localStorage.getItem('pitchiq_history');
+      return stored ? JSON.parse(stored) : INITIAL_HISTORY;
+    } catch {
+      return INITIAL_HISTORY;
+    }
+  });
+
+  // History Comparison Selectors (index of Revision A and B)
+  const [compareRevA, setCompareRevA] = useState(0);
+  const [compareRevB, setCompareRevB] = useState(pitchHistory.length - 1);
+
+  // Saved Pitches State
+  const [savedPitches, setSavedPitches] = useState(() => [
+    {
+      id: 'p-1',
+      title: 'PitchIQ - Enterprise SaaS',
+      snippet: 'Did you know enterprise sales teams waste 15 hours a week manually prepping discovery pitches?...',
+      score: 84,
+      status: 'Analysed',
+      lastUpdated: 'Today'
+    },
+    {
+      id: 'p-2',
+      title: 'Consumer Beverage Brand',
+      snippet: 'Hi, I\'m Parth, founder of King Water company. We bring pure Himalayan spring water infused with natural gold dust...',
+      score: 68,
+      status: 'Analysed',
+      lastUpdated: 'Yesterday'
+    },
+    {
+      id: 'p-3',
+      title: 'Hardware IoT Pitch',
+      snippet: 'How many times have you lost your keys or phone right when you are running late for an important meeting?...',
+      score: 74,
+      status: 'Analysed',
+      lastUpdated: '3 days ago'
+    }
+  ]);
+  const [savedFilter, setSavedFilter] = useState('all');
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
 
-  // Deal Database search & filters
+  // Deal Database Filters
   const [dbSearch, setDbSearch] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('All');
   const [selectedStage, setSelectedStage] = useState('All');
 
-  const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // Save history to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('pitchiq_history', JSON.stringify(pitchHistory));
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+  }, [pitchHistory]);
 
   const wordCount = pitch.trim().split(/\s+/).filter(Boolean).length;
 
-  const executeAnalysis = () => {
-    if (pitch.trim().length < 25 || loading) return;
-    setLoading(true);
-    setTimeout(() => {
-      const r = analyzePitch(pitch, 'Investor Pitch', 'Investors');
-      setResult(r);
-      setLoading(false);
-      setActiveTab('results');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 600);
-  };
-
-  const handleAnalyzeClick = () => {
-    if (pitch.trim().length < 25 || loading) return;
-    if (!hasSubscribed) {
-      setShowNewsletter(true);
-    } else {
-      executeAnalysis();
-    }
-  };
-
-  const handleNewsletterSubmit = async (e) => {
+  // ── Authentication Handlers ──
+  const handleAuthSubmit = (e) => {
     e.preventDefault();
-    const cleanEmail = email.trim();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
-      setEmailError('Please enter a valid email address.');
+    if (!authEmail) return;
+    const user = {
+      name: authName.trim() || authEmail.split('@')[0],
+      email: authEmail.trim(),
+      role: 'Founder / Researcher',
+      projectId: 'M2_CSE_027',
+      university: 'Silver Oak University'
+    };
+    setCurrentUser(user);
+    localStorage.setItem('pitchiq_auth_user', JSON.stringify(user));
+    setShowAuthModal(false);
+    setAuthEmail('');
+    setAuthPassword('');
+    setAuthName('');
+  };
+
+  const handleDemoLogin = (name, email) => {
+    const user = {
+      name,
+      email,
+      role: 'Project Lead',
+      projectId: 'M2_CSE_027',
+      university: 'Silver Oak University'
+    };
+    setCurrentUser(user);
+    localStorage.setItem('pitchiq_auth_user', JSON.stringify(user));
+    setShowAuthModal(false);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('pitchiq_auth_user');
+    setUserDropdownOpen(false);
+  };
+
+  // ── PDF Deck Upload Handler ──
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+      alert('Please upload a valid PDF presentation deck file.');
       return;
     }
 
-    await saveSubscriberEmail(cleanEmail, pitch);
-    setHasSubscribed(true);
-    setShowNewsletter(false);
-    setEmailError('');
-    executeAnalysis();
+    setPdfFile(file);
+    setPdfParsing(true);
+
+    try {
+      const extracted = await extractTextFromPDF(file);
+      const deckAnalysisResult = analyzePitchDeck(extracted.pages, extracted.fullText);
+      setDeckAnalysis(deckAnalysisResult);
+
+      // Populate text editor with extracted presentation transcript
+      setPitch(extracted.fullText);
+      setPdfParsing(false);
+    } catch (err) {
+      console.error('PDF parsing error:', err);
+      setPdfParsing(false);
+      alert('Could not parse PDF. Please ensure the file is an uncorrupted presentation PDF.');
+    }
   };
 
-  const handleNewsletterSkip = () => {
-    setShowNewsletter(false);
-    setEmailError('');
-    executeAnalysis();
+  // ── Run Analysis & Record in History ──
+  const executeAnalysis = () => {
+    if (pitch.trim().length < 25 || loading) return;
+    setLoading(true);
+
+    setTimeout(() => {
+      const analysisResult = analyzePitch(pitch, 'Investor Pitch', 'Investors');
+      setResult(analysisResult);
+
+      // Record this attempt dynamically in pitch history
+      const newAttempt = {
+        id: `rev-${Date.now()}`,
+        attemptNumber: pitchHistory.length + 1,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: 'Today',
+        pitchTitle: pitch.slice(0, 36).trim() + '...',
+        pitchText: pitch,
+        score: analysisResult.overall_score,
+        verdict: analysisResult.verdict,
+        metrics: analysisResult.metrics
+      };
+
+      const updatedHistory = [...pitchHistory, newAttempt];
+      setPitchHistory(updatedHistory);
+      setCompareRevA(Math.max(0, updatedHistory.length - 2));
+      setCompareRevB(updatedHistory.length - 1);
+
+      setLoading(false);
+      setActiveTab('results');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 700);
   };
 
   const handlePresetSelect = (preset, index) => {
     setSelectedPreset(index);
     setPitch(preset.text);
+    setInputMode('text');
+    setDeckAnalysis(null);
+    setPdfFile(null);
   };
 
   const handleCopyRewrite = () => {
@@ -135,19 +284,23 @@ export default function App() {
     const newPitch = {
       id: `p-${Date.now()}`,
       title: pitch.slice(0, 32).trim() + '...',
-      snippet: pitch.slice(0, 100),
+      snippet: pitch.slice(0, 110),
       score: result?.overall_score || 75,
       status: 'Analysed',
-      lastUpdated: 'Just now',
-      scoreType: (result?.overall_score || 75) >= 75 ? 'high' : 'mid'
+      lastUpdated: 'Just now'
     };
     setSavedPitches([newPitch, ...savedPitches]);
     setSaveSuccessMsg(true);
     setTimeout(() => setSaveSuccessMsg(false), 2500);
   };
 
-  const handleDownloadReport = () => {
-    window.print();
+  // Restore earlier revision to editor
+  const handleRestoreRevision = (rev) => {
+    setPitch(rev.pitchText);
+    const r = analyzePitch(rev.pitchText, 'Investor Pitch', 'Investors');
+    setResult(r);
+    setActiveTab('home');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Filtered Deal Database
@@ -161,24 +314,21 @@ export default function App() {
     return matchesSearch && matchesIndustry && matchesStage;
   });
 
-  // Filtered Saved Pitches
-  const filteredSavedPitches = savedPitches.filter(item => {
-    if (savedFilter === 'drafts') return item.status === 'Draft';
-    if (savedFilter === 'analysed') return item.status === 'Analysed';
-    return true;
-  });
-
   const industriesList = ['All', ...new Set(VENTURE_DEAL_CORPUS.map(d => d.industry))];
   const stagesList = ['All', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'Angel'];
 
-  // Score metrics
   const score = result?.overall_score ?? 79;
   const verdictTitle = result?.verdict?.split(':')[0] || 'Promising Concept';
+
+  // Compare Revision A & Revision B for History view
+  const revA = pitchHistory[compareRevA] || pitchHistory[0];
+  const revB = pitchHistory[compareRevB] || pitchHistory[pitchHistory.length - 1];
+  const scoreDelta = revB && revA ? revB.score - revA.score : 0;
 
   return (
     <div className="app-container">
 
-      {/* ── Top Navigation Bar (Shown on Home / Landing View) ── */}
+      {/* ── Top Navigation Bar ── */}
       {activeTab === 'home' && (
         <header className="top-nav">
           <div className="nav-inner">
@@ -194,44 +344,64 @@ export default function App() {
               <button className="nav-item" onClick={() => setActiveTab('database')}>
                 Deal Database
               </button>
-              <button className="nav-item" onClick={() => { setActiveTab('results'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-                How It Works
-              </button>
-              <button className="nav-item" onClick={() => setActiveTab('saved')}>
-                Templates
+              <button className="nav-item" onClick={() => setActiveTab('history')}>
+                Score Comparison
               </button>
               <button className="nav-item" onClick={() => setActiveTab('saved')}>
                 Saved Pitches
               </button>
             </nav>
 
-            <div className="nav-profile">
-              <span className="avatar-circle">A</span>
-              <span className="profile-name">Akshat</span>
-              <span className="profile-chevron">▾</span>
-            </div>
+            {/* User Profile / Auth State */}
+            {currentUser ? (
+              <div className="nav-profile-container">
+                <div className="nav-profile" onClick={() => setUserDropdownOpen(!userDropdownOpen)}>
+                  <span className="avatar-circle">{currentUser.name.charAt(0).toUpperCase()}</span>
+                  <span className="profile-name">{currentUser.name.split(' ')[0]}</span>
+                  <span className="profile-chevron">▾</span>
+                </div>
+
+                {userDropdownOpen && (
+                  <div className="profile-dropdown-card">
+                    <div className="dropdown-user-info">
+                      <strong>{currentUser.name}</strong>
+                      <span className="dropdown-email">{currentUser.email}</span>
+                      <span className="dropdown-meta">Silver Oak Univ &bull; M2_CSE_027</span>
+                    </div>
+                    <div className="dropdown-divider" />
+                    <button className="dropdown-item" onClick={() => { setActiveTab('history'); setUserDropdownOpen(false); }}>
+                      📈 Score Comparison History
+                    </button>
+                    <button className="dropdown-item" onClick={() => { setActiveTab('saved'); setUserDropdownOpen(false); }}>
+                      💾 Saved Pitches
+                    </button>
+                    <div className="dropdown-divider" />
+                    <button className="dropdown-item logout" onClick={handleLogout}>
+                      🚪 Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button className="nav-signin-btn" onClick={() => { setAuthMode('login'); setShowAuthModal(true); }}>
+                Sign In
+              </button>
+            )}
           </div>
         </header>
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          SCREEN 1: HERO & PITCH INPUT VIEW (Top Left of image)
+          SCREEN 1: HERO & PITCH INPUT VIEW (With PDF Upload & Tabs)
       ══════════════════════════════════════════════════════════════ */}
       {activeTab === 'home' && (
         <main className="hero-page">
-          {/* Decorative floating crystal/graph widgets */}
           <div className="floating-shape shape-left" aria-hidden="true" />
           <div className="floating-shape shape-right" aria-hidden="true" />
-          <div className="floating-graph-widget" aria-hidden="true">
-            <div className="graph-badge">
-              <span className="graph-dot" /> Stronger Pitches
-            </div>
-            <div className="graph-sub">Higher Chances</div>
-          </div>
 
           <div className="hero-content">
             <div className="hero-pill-badge">
-              AI-POWERED PITCH ANALYSIS
+              AI-POWERED PITCH ANALYSIS &bull; V2.0
             </div>
 
             <h1 className="hero-headline">
@@ -240,7 +410,7 @@ export default function App() {
             </h1>
 
             <p className="hero-description">
-              Get instant, AI-powered feedback on your startup pitch backed by real venture deals, investor insights, and proven frameworks.
+              Get instant, AI-powered feedback on your startup pitch or pitch deck presentation backed by real venture deals and proven frameworks.
             </p>
 
             {/* 3 Feature Pills Row */}
@@ -270,49 +440,131 @@ export default function App() {
               </div>
             </div>
 
-            {/* Main Editor Card */}
+            {/* Main Input Card with Text vs PDF Toggle */}
             <div className="editor-card">
-              {/* Presets Row */}
-              <div className="sample-chips-row">
-                <span className="sample-label">Try a sample:</span>
-                <div className="chips-group">
-                  {PRESET_PITCHES.map((preset, idx) => (
-                    <button
-                      key={preset.title}
-                      className={`sample-chip ${selectedPreset === idx ? 'selected' : ''}`}
-                      onClick={() => handlePresetSelect(preset, idx)}
-                    >
-                      {preset.title}
-                    </button>
-                  ))}
-                </div>
+              {/* Input Mode Selector Bar */}
+              <div className="input-mode-switcher">
+                <button
+                  className={`mode-btn ${inputMode === 'text' ? 'active' : ''}`}
+                  onClick={() => setInputMode('text')}
+                >
+                  📝 Pitch Script (Text)
+                </button>
+                <button
+                  className={`mode-btn ${inputMode === 'pdf' ? 'active' : ''}`}
+                  onClick={() => setInputMode('pdf')}
+                >
+                  📄 Pitch Deck (PDF Upload)
+                </button>
               </div>
 
-              {/* Textarea */}
-              <div className="textarea-container">
-                <textarea
-                  ref={textareaRef}
-                  className="hero-textarea"
-                  value={pitch}
-                  onChange={(e) => setPitch(e.target.value)}
-                  placeholder="Paste your pitch here (e.g. problem, solution, unit economics, traction, and funding ask)..."
-                  rows={6}
-                />
-              </div>
+              {/* Mode 1: Text Script */}
+              {inputMode === 'text' && (
+                <>
+                  <div className="sample-chips-row">
+                    <span className="sample-label">Try a sample:</span>
+                    <div className="chips-group">
+                      {PRESET_PITCHES.map((preset, idx) => (
+                        <button
+                          key={preset.title}
+                          className={`sample-chip ${selectedPreset === idx ? 'selected' : ''}`}
+                          onClick={() => handlePresetSelect(preset, idx)}
+                        >
+                          {preset.title}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="textarea-container">
+                    <textarea
+                      className="hero-textarea"
+                      value={pitch}
+                      onChange={(e) => setPitch(e.target.value)}
+                      placeholder="Paste your pitch here (e.g. problem, solution, unit economics, traction, and funding ask)..."
+                      rows={6}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Mode 2: PDF Pitch Deck Upload */}
+              {inputMode === 'pdf' && (
+                <div className="pdf-upload-container">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept=".pdf,application/pdf"
+                    style={{ display: 'none' }}
+                    onChange={handleFileChange}
+                  />
+
+                  <div
+                    className={`pdf-dropzone ${pdfFile ? 'has-file' : ''}`}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <div className="pdf-icon-badge">📄</div>
+                    {pdfParsing ? (
+                      <div className="pdf-parsing-state">
+                        <span className="spinner-circle-blue" />
+                        <strong>Extracting Slide Deck Content...</strong>
+                        <p>Analyzing slide text density and structural sections</p>
+                      </div>
+                    ) : pdfFile ? (
+                      <div className="pdf-uploaded-state">
+                        <strong className="pdf-filename">{pdfFile.name}</strong>
+                        <p className="pdf-meta-badge">
+                          ✓ {(pdfFile.size / 1024).toFixed(1)} KB &bull; {deckAnalysis?.totalSlides || 'Multiple'} Slides Extracted
+                        </p>
+                        <span className="click-to-change">Click to replace PDF deck</span>
+                      </div>
+                    ) : (
+                      <div className="pdf-prompt-state">
+                        <strong>Click or Drag & Drop Pitch Deck (PDF)</strong>
+                        <p>Upload your presentation slides (10–15 slides recommended)</p>
+                        <span className="pdf-types-hint">Supported format: PDF (.pdf) up to 25MB</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {deckAnalysis && (
+                    <div className="deck-summary-strip">
+                      <div className="strip-item">
+                        <span className="strip-label">Slides Detected</span>
+                        <strong>{deckAnalysis.totalSlides} slides</strong>
+                      </div>
+                      <div className="strip-item">
+                        <span className="strip-label">Word Density</span>
+                        <strong>~{deckAnalysis.avgWordsPerSlide} words/slide</strong>
+                      </div>
+                      <div className="strip-item">
+                        <span className="strip-label">Key Sections</span>
+                        <strong>{deckAnalysis.detectedSections.length}/8 Covered</strong>
+                      </div>
+                      <div className="strip-item">
+                        <span className="strip-label">Deck Structural Score</span>
+                        <strong className="green-accent">{deckAnalysis.structuralScore}/100</strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Editor Card Footer */}
               <div className="editor-card-footer">
-                <span className="word-count-badge">{wordCount} words</span>
+                <span className="word-count-badge">
+                  {wordCount} words {deckAnalysis ? `(${deckAnalysis.totalSlides} slides)` : ''}
+                </span>
 
                 <button
                   className="analyze-cta-btn"
-                  onClick={handleAnalyzeClick}
-                  disabled={pitch.trim().length < 25 || loading}
+                  onClick={executeAnalysis}
+                  disabled={pitch.trim().length < 25 || loading || pdfParsing}
                 >
                   {loading ? (
                     <><span className="spinner-circle" /> Analyzing Pitch...</>
                   ) : (
-                    <>✨ Analyze Pitch &rarr;</>
+                    <>✨ Analyze {inputMode === 'pdf' ? 'Pitch Deck' : 'Pitch'} &rarr;</>
                   )}
                 </button>
               </div>
@@ -322,7 +574,7 @@ export default function App() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          DASHBOARD WRAPPER: SCREENS 3, 4, 5, 6 (With Left Sidebar)
+          DASHBOARD SHELL: RESULTS, HISTORY, DATABASE, SAVED PITCHES
       ══════════════════════════════════════════════════════════════ */}
       {activeTab !== 'home' && (
         <div className="dashboard-layout">
@@ -351,6 +603,14 @@ export default function App() {
               </button>
 
               <button
+                className={`sidebar-link ${activeTab === 'history' ? 'active' : ''}`}
+                onClick={() => setActiveTab('history')}
+              >
+                <span className="sidebar-icon">📈</span>
+                Score Comparison
+              </button>
+
+              <button
                 className={`sidebar-link ${activeTab === 'database' ? 'active' : ''}`}
                 onClick={() => setActiveTab('database')}
               >
@@ -365,48 +625,13 @@ export default function App() {
                 <span className="sidebar-icon">💾</span>
                 Saved Pitches
               </button>
-
-              <button
-                className="sidebar-link"
-                onClick={() => { setActiveTab('home'); setSelectedPreset(1); setPitch(PRESET_PITCHES[1].text); }}
-              >
-                <span className="sidebar-icon">📄</span>
-                Templates
-              </button>
-
-              <button
-                className="sidebar-link"
-                onClick={() => setActiveTab('saved')}
-              >
-                <span className="sidebar-icon">⏱️</span>
-                History
-              </button>
-
-              <button
-                className="sidebar-link"
-                onClick={() => alert('PitchIQ v2.0 Settings: Client-side RAG active. Supabase connection ready.')}
-              >
-                <span className="sidebar-icon">⚙️</span>
-                Settings
-              </button>
             </nav>
 
-            {/* Bottom Upgrade to Pro Card */}
-            <div className="upgrade-card">
-              <div className="upgrade-title">
-                <span className="crown-icon">👑</span> Upgrade to Pro
-              </div>
-              <ul className="upgrade-benefits">
-                <li>✔ Unlimited analyses</li>
-                <li>✔ Advanced insights</li>
-                <li>✔ Export reports</li>
-              </ul>
-              <button
-                className="upgrade-btn"
-                onClick={() => alert('PitchIQ Pro: Unlimited analyses and PDF exports included for university demo!')}
-              >
-                Upgrade
-              </button>
+            {/* University & User Card */}
+            <div className="sidebar-project-card">
+              <div className="proj-title">Silver Oak University</div>
+              <p className="proj-code">Project ID: M2_CSE_027</p>
+              <p className="proj-guide">Guide: Prof. Hemali Patel</p>
             </div>
           </aside>
 
@@ -420,6 +645,12 @@ export default function App() {
                   <>
                     <h2 className="page-heading">Pitch Analysis Results</h2>
                     <p className="page-subheading">AI-powered evaluation based on investor criteria and real venture data.</p>
+                  </>
+                )}
+                {activeTab === 'history' && (
+                  <>
+                    <h2 className="page-heading">Pitch History & Score Comparison</h2>
+                    <p className="page-subheading">Track your progress across iterations and compare exact criteria deltas.</p>
                   </>
                 )}
                 {activeTab === 'database' && (
@@ -439,8 +670,8 @@ export default function App() {
               <div className="header-actions">
                 {activeTab === 'results' && (
                   <>
-                    <button className="secondary-action-btn" onClick={handleDownloadReport}>
-                      📥 Download Report
+                    <button className="secondary-action-btn" onClick={() => setShowReportModal(true)}>
+                      📥 Download PDF Report
                     </button>
                     <button className="primary-gradient-btn" onClick={handleSaveCurrentPitch}>
                       💾 {saveSuccessMsg ? 'Saved! ✓' : 'Save Pitch'}
@@ -454,21 +685,27 @@ export default function App() {
                   </button>
                 )}
 
-                <div className="nav-profile-badge">
-                  <span className="avatar-circle">A</span>
-                  <span className="profile-name">Akshat</span>
-                  <span className="profile-chevron">▾</span>
-                </div>
+                {currentUser ? (
+                  <div className="nav-profile-badge" onClick={() => setUserDropdownOpen(!userDropdownOpen)}>
+                    <span className="avatar-circle">{currentUser.name.charAt(0).toUpperCase()}</span>
+                    <span className="profile-name">{currentUser.name.split(' ')[0]}</span>
+                    <span className="profile-chevron">▾</span>
+                  </div>
+                ) : (
+                  <button className="secondary-action-btn" onClick={() => setShowAuthModal(true)}>
+                    Sign In
+                  </button>
+                )}
               </div>
             </header>
 
             {/* ══════════════════════════════════════════════════════════════
-                SCREENS 3 & 4: RESULTS & DETAILED FEEDBACK VIEW
+                RESULTS VIEW (Pitch Analysis + Deck Structural Diagnostics)
             ══════════════════════════════════════════════════════════════ */}
             {activeTab === 'results' && result && (
               <div className="results-grid-layout">
 
-                {/* Left Column: Score + 3 Bento Cards (Screen 3) */}
+                {/* Left Column: Score + Deck Diagnostic + 3 Bento Cards */}
                 <div className="results-primary-col">
 
                   {/* Investability Score Banner Card */}
@@ -499,11 +736,65 @@ export default function App() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Progress Indicator Banner */}
+                    {pitchHistory.length > 1 && (
+                      <div className="revision-progress-banner">
+                        <span>
+                          <strong>Revision #{pitchHistory.length}</strong>: Scored {score}/100
+                          {scoreDelta !== 0 && (
+                            <span className={scoreDelta > 0 ? 'green-delta' : 'red-delta'}>
+                              {' '}({scoreDelta > 0 ? `+${scoreDelta}` : scoreDelta} pts vs previous)
+                            </span>
+                          )}
+                        </span>
+                        <button className="view-history-link" onClick={() => setActiveTab('history')}>
+                          View Full Score Progression &rarr;
+                        </button>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Pitch Deck Diagnostic Card (Rendered if a PDF was analyzed) */}
+                  {deckAnalysis && (
+                    <div className="card-panel deck-structure-card">
+                      <div className="panel-header">
+                        <span className="panel-icon">📑</span>
+                        <h3 className="panel-title">Pitch Deck Structural Breakdown ({deckAnalysis.totalSlides} Slides)</h3>
+                        <span className="deck-score-badge">Structural Score: {deckAnalysis.structuralScore}/100</span>
+                      </div>
+
+                      <p className="deck-diagnostic-sub">
+                        Analysis of slide coverage, narrative progression, and text density for presentation.
+                      </p>
+
+                      {/* 8 Required Slides Checklist */}
+                      <div className="deck-sections-grid">
+                        {deckAnalysis.sectionStatus.map(sec => (
+                          <div key={sec.id} className={`deck-sec-pill ${sec.detected ? 'detected' : 'missing'}`}>
+                            <span className="sec-check">{sec.detected ? '✔' : '✖'}</span>
+                            <span className="sec-name">{sec.name}</span>
+                            {sec.slide && <span className="sec-slide-num">Slide {sec.slide}</span>}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Deck Specific Flags */}
+                      {deckAnalysis.deckFlags.length > 0 && (
+                        <div className="deck-flags-subpanel">
+                          <strong>Presentation Slide Warnings:</strong>
+                          <ul>
+                            {deckAnalysis.deckFlags.map((flag, i) => (
+                              <li key={i}>{flag}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* 3-Cards Row */}
                   <div className="bento-row">
-
                     {/* Card 1: 6-Factor Analysis */}
                     <div className="card-panel factor-analysis-card">
                       <div className="panel-header">
@@ -535,29 +826,26 @@ export default function App() {
                       </div>
 
                       <div className="deals-items-stack">
-                        {/* Funded Benchmark */}
                         <div className="deal-entry">
                           <span className="deal-indicator funded-dot" />
                           <div className="deal-info">
                             <div className="deal-title">{result.retrieved_case_studies.funded_benchmark.name}</div>
                             <div className="deal-meta-line">
-                              Funded &bull; {result.retrieved_case_studies.funded_benchmark.stage || result.retrieved_case_studies.funded_benchmark.season} &bull; {result.retrieved_case_studies.funded_benchmark.ask}
+                              Funded &bull; {result.retrieved_case_studies.funded_benchmark.stage || 'Seed'} &bull; {result.retrieved_case_studies.funded_benchmark.ask}
                             </div>
                           </div>
                         </div>
 
-                        {/* Cautionary Benchmark */}
                         <div className="deal-entry">
                           <span className="deal-indicator cautionary-dot" />
                           <div className="deal-info">
                             <div className="deal-title">{result.retrieved_case_studies.rejected_benchmark.name}</div>
                             <div className="deal-meta-line">
-                              Cautionary &bull; {result.retrieved_case_studies.rejected_benchmark.stage || result.retrieved_case_studies.rejected_benchmark.season} &bull; {result.retrieved_case_studies.rejected_benchmark.ask}
+                              Cautionary &bull; {result.retrieved_case_studies.rejected_benchmark.stage || 'Series A'} &bull; {result.retrieved_case_studies.rejected_benchmark.ask}
                             </div>
                           </div>
                         </div>
 
-                        {/* Winning Hook Quote Box */}
                         <div className="deal-hook-quote-box">
                           <p className="hook-quote-text">
                             "{result.retrieved_case_studies.funded_benchmark.hook}"
@@ -590,11 +878,10 @@ export default function App() {
                         ))}
                       </div>
                     </div>
-
                   </div>
                 </div>
 
-                {/* Right Column: Detailed Feedback (Screen 4) */}
+                {/* Right Column: Detailed Feedback */}
                 <div className="results-secondary-col">
                   <div className="detailed-feedback-wrapper">
 
@@ -632,13 +919,23 @@ export default function App() {
                       </ul>
                     </div>
 
-                    {/* Edit Pitch CTA Button */}
-                    <button
-                      className="edit-pitch-btn"
-                      onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                    >
-                      &larr; Edit Pitch
-                    </button>
+                    {/* Action buttons */}
+                    <div className="results-bottom-actions">
+                      <button
+                        className="edit-pitch-btn"
+                        onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      >
+                        &larr; Edit Pitch
+                      </button>
+
+                      <button
+                        className="download-pdf-cta"
+                        onClick={() => setShowReportModal(true)}
+                      >
+                        📥 Download Full Report (PDF)
+                      </button>
+                    </div>
+
                   </div>
                 </div>
 
@@ -646,11 +943,191 @@ export default function App() {
             )}
 
             {/* ══════════════════════════════════════════════════════════════
-                SCREEN 5: DEAL DATABASE VIEW (Bottom Left of image)
+                FEATURE 1 & 2: PITCH HISTORY & SCORE COMPARISON VIEW
+            ══════════════════════════════════════════════════════════════ */}
+            {activeTab === 'history' && (
+              <div className="history-view-panel">
+
+                {/* Score Progression Stepper Banner */}
+                <div className="card-panel progression-stepper-card">
+                  <div className="panel-header">
+                    <span className="panel-icon">📈</span>
+                    <h3 className="panel-title">Score Progression Across Revisions</h3>
+                  </div>
+
+                  <div className="stepper-horizontal-track">
+                    {pitchHistory.map((rev, idx) => {
+                      const prevScore = idx > 0 ? pitchHistory[idx - 1].score : null;
+                      const delta = prevScore !== null ? rev.score - prevScore : null;
+
+                      return (
+                        <div key={rev.id} className="stepper-step-node">
+                          <div className="step-circle" onClick={() => handleRestoreRevision(rev)}>
+                            <span className="step-number">Attempt #{rev.attemptNumber}</span>
+                            <span className="step-score">{rev.score}</span>
+                            {delta !== null && (
+                              <span className={`step-delta ${delta >= 0 ? 'positive' : 'negative'}`}>
+                                {delta >= 0 ? `+${delta}` : delta}
+                              </span>
+                            )}
+                          </div>
+                          <span className="step-meta">{rev.date} &bull; {rev.timestamp}</span>
+                          {idx < pitchHistory.length - 1 && <div className="step-connector-line" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Side-by-Side Comparison Selector */}
+                <div className="card-panel comparison-tool-card">
+                  <div className="panel-header-split">
+                    <div className="panel-header">
+                      <span className="panel-icon">⚖️</span>
+                      <h3 className="panel-title">Criteria-by-Criteria Revision Comparison</h3>
+                    </div>
+
+                    <div className="compare-selectors">
+                      <span>Compare: </span>
+                      <select
+                        className="compare-dropdown"
+                        value={compareRevA}
+                        onChange={(e) => setCompareRevA(Number(e.target.value))}
+                      >
+                        {pitchHistory.map((h, i) => (
+                          <option key={h.id} value={i}>Revision #{h.attemptNumber} ({h.score} pts)</option>
+                        ))}
+                      </select>
+                      <span> vs. </span>
+                      <select
+                        className="compare-dropdown"
+                        value={compareRevB}
+                        onChange={(e) => setCompareRevB(Number(e.target.value))}
+                      >
+                        {pitchHistory.map((h, i) => (
+                          <option key={h.id} value={i}>Revision #{h.attemptNumber} ({h.score} pts)</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Summary Delta Banner */}
+                  <div className="delta-summary-box">
+                    <div className="delta-score-big">
+                      <span className="delta-num">
+                        {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta}
+                      </span>
+                      <span className="delta-label">Overall Points Progress ({revA?.score || 0} &rarr; {revB?.score || 0})</span>
+                    </div>
+                    <p className="delta-narrative">
+                      {scoreDelta > 0
+                        ? `Great work! Your pitch improved by ${scoreDelta} points through sharper rhetorical structure and proof points.`
+                        : scoreDelta === 0
+                        ? 'No change in overall score between these revisions.'
+                        : `Score decreased by ${Math.abs(scoreDelta)} points. Check missing traction numbers or opening hook length.`}
+                    </p>
+                  </div>
+
+                  {/* 6-Factor Side-by-Side Delta Table */}
+                  <div className="table-responsive-card">
+                    <table className="comparison-table">
+                      <thead>
+                        <tr>
+                          <th>Evaluation Criterion</th>
+                          <th>Revision #{revA?.attemptNumber}</th>
+                          <th>Revision #{revB?.attemptNumber}</th>
+                          <th>Delta</th>
+                          <th>Progress Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {['Clarity & Logic', 'Opening Hook', 'Rhetorical Structure', 'Persuasion & Proof', 'Call-to-Action', 'Investor Confidence'].map(factor => {
+                          const valA = revA?.metrics?.[factor] || 0;
+                          const valB = revB?.metrics?.[factor] || 0;
+                          const delta = valB - valA;
+
+                          return (
+                            <tr key={factor}>
+                              <td><strong>{factor}</strong></td>
+                              <td>{valA}/100</td>
+                              <td><strong>{valB}/100</strong></td>
+                              <td>
+                                <span className={`delta-pill ${delta > 0 ? 'gain' : delta < 0 ? 'drop' : 'neutral'}`}>
+                                  {delta > 0 ? `+${delta}` : delta}
+                                </span>
+                              </td>
+                              <td>
+                                {delta > 0 ? (
+                                  <span className="status-improved">✔ Improved (+{delta}%)</span>
+                                ) : delta === 0 ? (
+                                  <span className="status-unchanged">&mdash; Unchanged</span>
+                                ) : (
+                                  <span className="status-regressed">⚠️ Needs Review</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                </div>
+
+                {/* Past Analyses Table */}
+                <div className="card-panel">
+                  <div className="panel-header">
+                    <span className="panel-icon">📁</span>
+                    <h3 className="panel-title">All Analyzed Revisions</h3>
+                  </div>
+
+                  <div className="table-responsive-card">
+                    <table className="saved-data-table">
+                      <thead>
+                        <tr>
+                          <th>Revision</th>
+                          <th>Pitch Excerpt</th>
+                          <th>Investability Score</th>
+                          <th>Date & Time</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pitchHistory.slice().reverse().map(rev => (
+                          <tr key={rev.id}>
+                            <td><strong>Attempt #{rev.attemptNumber}</strong></td>
+                            <td className="saved-title-cell">
+                              <p className="saved-snippet">{rev.pitchText.slice(0, 95)}...</p>
+                            </td>
+                            <td>
+                              <span className={`table-score-pill ${rev.score >= 75 ? 'green' : rev.score >= 60 ? 'amber' : 'gray'}`}>
+                                {rev.score}/100
+                              </span>
+                            </td>
+                            <td>{rev.date} at {rev.timestamp}</td>
+                            <td>
+                              <button
+                                className="secondary-action-btn"
+                                onClick={() => handleRestoreRevision(rev)}
+                              >
+                                Restore in Editor &rarr;
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════
+                DEAL DATABASE VIEW
             ══════════════════════════════════════════════════════════════ */}
             {activeTab === 'database' && (
               <div className="database-view-panel">
-                {/* Search & Filters Bar */}
                 <div className="database-controls-bar">
                   <div className="search-input-wrapper">
                     <span className="search-icon">🔍</span>
@@ -693,7 +1170,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Deals Table */}
                 <div className="table-responsive-card">
                   <table className="deal-data-table">
                     <thead>
@@ -731,11 +1207,10 @@ export default function App() {
             )}
 
             {/* ══════════════════════════════════════════════════════════════
-                SCREEN 6: SAVED PITCHES VIEW (Bottom Right of image)
+                SAVED PITCHES VIEW
             ══════════════════════════════════════════════════════════════ */}
             {activeTab === 'saved' && (
               <div className="saved-pitches-view-panel">
-                {/* Tabs filter */}
                 <div className="saved-tabs-row">
                   <div className="saved-filter-tabs">
                     <button
@@ -759,7 +1234,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Saved Pitches Table */}
                 <div className="table-responsive-card">
                   <table className="saved-data-table">
                     <thead>
@@ -772,24 +1246,20 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredSavedPitches.map((saved) => (
+                      {savedPitches.map((saved) => (
                         <tr key={saved.id}>
                           <td className="saved-title-cell">
                             <strong>{saved.title}</strong>
                             <p className="saved-snippet">{saved.snippet}</p>
                           </td>
                           <td>
-                            {saved.score !== null ? (
-                              <span className={`table-score-pill ${saved.score >= 75 ? 'green' : 'amber'}`}>
-                                {saved.score}
-                              </span>
-                            ) : (
-                              <span className="table-score-pill gray">Draft</span>
-                            )}
+                            <span className={`table-score-pill ${saved.score >= 75 ? 'green' : 'amber'}`}>
+                              {saved.score}
+                            </span>
                           </td>
                           <td className="date-cell">{saved.lastUpdated}</td>
                           <td>
-                            <span className={`status-tag ${saved.status === 'Analysed' ? 'analysed' : 'draft'}`}>
+                            <span className="status-tag analysed">
                               {saved.status}
                             </span>
                           </td>
@@ -822,76 +1292,256 @@ export default function App() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          SCREEN 2: NEWSLETTER MODAL (Top Right of image)
+          FEATURE 2: DOWNLOADABLE PITCH ANALYSIS REPORT MODAL (PDF)
       ══════════════════════════════════════════════════════════════ */}
-      {showNewsletter && (
-        <div className="overlay-backdrop" onClick={() => setShowNewsletter(false)}>
-          <div className="newsletter-card-modal" onClick={e => e.stopPropagation()}>
-            <div className="newsletter-modal-header">
+      {showReportModal && (
+        <div className="overlay-backdrop" onClick={() => setShowReportModal(false)}>
+          <div className="report-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="report-modal-header no-print">
+              <div className="modal-title-lockup">
+                <h3>Executive Pitch Evaluation Report</h3>
+                <p>Official diagnostic dossier generated for university viva presentation and investor readiness.</p>
+              </div>
+              <div className="report-modal-actions">
+                <button className="print-btn" onClick={() => window.print()}>
+                  🖨️ Print / Save as PDF
+                </button>
+                <button className="modal-close-cross" onClick={() => setShowReportModal(false)}>
+                  &times;
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Document Body */}
+            <div className="printable-report-body" id="printable-pitch-report">
+              {/* Document Header */}
+              <div className="doc-report-header">
+                <div className="doc-brand">
+                  <h2>PitchIQ Executive Analysis Report</h2>
+                  <span className="doc-sub">Knowledge-Grounded Pitch Optimization & Case Precedent Benchmark</span>
+                </div>
+                <div className="doc-meta">
+                  <p><strong>Institution:</strong> Silver Oak University</p>
+                  <p><strong>Department:</strong> Computer Engineering</p>
+                  <p><strong>Project ID:</strong> M2_CSE_027</p>
+                  <p><strong>Faculty Guide:</strong> Prof. Hemali Patel</p>
+                  <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              {/* Executive Scorecard */}
+              <div className="doc-section scorecard-box">
+                <div className="score-badge-col">
+                  <span className="score-caption">INVESTABILITY SCORE</span>
+                  <div className="score-big-display">{score}<span>/100</span></div>
+                  <span className="verdict-tag">{verdictTitle}</span>
+                </div>
+                <div className="verdict-summary-col">
+                  <h4>Diagnostic Verdict</h4>
+                  <p>{result?.verdict}</p>
+                  <div className="doc-tags">
+                    {result?.winning_tags?.map(t => (
+                      <span key={t} className="doc-tag-pill">✓ {t}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 6-Factor Criterion Breakdown Table */}
+              <div className="doc-section">
+                <h4 className="doc-section-title">1. Criterion-Level Rhetorical Breakdown</h4>
+                <table className="doc-table">
+                  <thead>
+                    <tr>
+                      <th>Rhetorical Axis</th>
+                      <th>Score</th>
+                      <th>Investor Benchmark Standard</th>
+                      <th>Rating</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(result?.metrics || {}).map(([metric, val]) => (
+                      <tr key={metric}>
+                        <td><strong>{metric}</strong></td>
+                        <td>{val}/100</td>
+                        <td>
+                          {metric === 'Clarity & Logic' && 'Explicit problem-solution sequence without technical jargon'}
+                          {metric === 'Opening Hook' && 'Grabs listener attention within first 14 spoken words'}
+                          {metric === 'Rhetorical Structure' && 'Classic 5-stage setup: Hook → Pain → Solution → Traction → Ask'}
+                          {metric === 'Persuasion & Proof' && 'Verifiable unit economics (COGS, gross margin, customer metrics)'}
+                          {metric === 'Call-to-Action' && 'Unambiguous financing ask and specific use of capital'}
+                          {metric === 'Investor Confidence' && 'Defensible positioning against incumbent alternatives'}
+                        </td>
+                        <td>
+                          <span className={`doc-rating ${val >= 75 ? 'optimal' : val >= 50 ? 'acceptable' : 'critical'}`}>
+                            {val >= 75 ? 'Optimal' : val >= 50 ? 'Acceptable' : 'Critical'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Critical Flags */}
+              <div className="doc-section">
+                <h4 className="doc-section-title">2. Critical Flags & Identified Pitfalls</h4>
+                <div className="doc-flags-list">
+                  {result?.mistakes?.map((m, i) => (
+                    <div key={i} className="doc-flag-row">
+                      <span className="flag-cross">✖</span>
+                      <span>{m}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Suggested Opening Rewrite */}
+              <div className="doc-section">
+                <h4 className="doc-section-title">3. Reconstructed 5-Stage Elevator Pitch</h4>
+                <div className="doc-rewrite-box">
+                  <p>{result?.rewritten_opening}</p>
+                </div>
+              </div>
+
+              {/* Investor Reactions Q&A */}
+              <div className="doc-section">
+                <h4 className="doc-section-title">4. Institutional Investor Panel Assessment</h4>
+                <div className="doc-investor-grid">
+                  {(result?.investor_reactions || result?.shark_reactions || []).map((r, i) => (
+                    <div key={i} className="doc-investor-card">
+                      <strong>{r.name} <em>({r.archetype})</em></strong>
+                      <p>"{r.feedback}"</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actionable Next Steps Checklist */}
+              <div className="doc-section">
+                <h4 className="doc-section-title">5. Viva & Investor Pitch Readiness Checklist</h4>
+                <ul className="doc-checklist">
+                  <li><input type="checkbox" defaultChecked /> Memorize the 10-second opening hook statement</li>
+                  <li><input type="checkbox" defaultChecked={result?.winning_tags?.includes('Traction Verified')} /> Verify unit economics (COGS, wholesale, gross margin) with audited figures</li>
+                  <li><input type="checkbox" defaultChecked /> Rehearse closing ask without hesitation (Equity percentage & dollar amount)</li>
+                  <li><input type="checkbox" /> Prepare response slide addressing the cautionary venture precedent</li>
+                  <li><input type="checkbox" /> Run 3 timed oral rehearsals with peer evaluators before viva review</li>
+                </ul>
+              </div>
+
+              {/* Signatures */}
+              <div className="doc-signatures">
+                <div className="sig-block">
+                  <div className="sig-line" />
+                  <span>Student Presenter Signature</span>
+                </div>
+                <div className="sig-block">
+                  <div className="sig-line" />
+                  <span>Faculty Guide (Prof. Hemali Patel)</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          FEATURE 1: LOGIN & SIGN UP MODAL (Replacing Newsletter)
+      ══════════════════════════════════════════════════════════════ */}
+      {showAuthModal && (
+        <div className="overlay-backdrop" onClick={() => setShowAuthModal(false)}>
+          <div className="auth-card-modal" onClick={e => e.stopPropagation()}>
+            <div className="auth-modal-header">
               <span className="modal-brand">PitchIQ</span>
-              <button
-                className="modal-close-cross"
-                onClick={() => setShowNewsletter(false)}
-                aria-label="Close"
-              >
+              <button className="modal-close-cross" onClick={() => setShowAuthModal(false)}>
                 &times;
               </button>
             </div>
 
-            {/* Envelope Illustration Icon */}
-            <div className="newsletter-envelope-visual">
-              <div className="envelope-graphic">
-                <span className="letter-icon">✉️</span>
-                <span className="sparkle-deco">✨</span>
-              </div>
+            <div className="auth-mode-toggle">
+              <button
+                className={`auth-toggle-tab ${authMode === 'login' ? 'active' : ''}`}
+                onClick={() => setAuthMode('login')}
+              >
+                Sign In
+              </button>
+              <button
+                className={`auth-toggle-tab ${authMode === 'signup' ? 'active' : ''}`}
+                onClick={() => setAuthMode('signup')}
+              >
+                Create Account
+              </button>
             </div>
 
-            <div className="newsletter-tag-badge">
-              FOUNDER NEWSLETTER
-            </div>
-
-            <h3 className="newsletter-card-title">
-              Unlock Your Pitch Rating
+            <h3 className="auth-title">
+              {authMode === 'login' ? 'Welcome Back to PitchIQ' : 'Create Your Founder Account'}
             </h3>
-
-            <p className="newsletter-card-sub">
-              Join 4,200+ founders receiving weekly pitch breakdowns, fundraising templates, and venture teardowns directly in their inbox.
+            <p className="auth-sub">
+              Access your saved pitches, revision history, and case-grounded venture analytics.
             </p>
 
-            <form onSubmit={handleNewsletterSubmit} className="newsletter-modal-form">
-              <div className="input-with-icon">
-                <span className="mail-icon">✉</span>
+            <form onSubmit={handleAuthSubmit} className="auth-form">
+              {authMode === 'signup' && (
+                <div className="form-group">
+                  <label>Full Name</label>
+                  <input
+                    type="text"
+                    className="auth-input"
+                    placeholder="e.g. Parth Bavalliya"
+                    value={authName}
+                    onChange={(e) => setAuthName(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+
+              <div className="form-group">
+                <label>Email Address</label>
                 <input
                   type="email"
-                  className={`modal-email-input ${emailError ? 'has-error' : ''}`}
-                  placeholder="Enter your email (e.g. founder@company.com)"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
-                  autoFocus
+                  className="auth-input"
+                  placeholder="name@company.com"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  required
                 />
               </div>
-              {emailError && <div className="modal-error-message">{emailError}</div>}
 
-              <button type="submit" className="unlock-pitch-score-btn">
-                Unlock Pitch Score &rarr;
-              </button>
-
-              <div className="benefits-checklist">
-                <div className="check-item">
-                  <span className="blue-check">✔</span> Weekly pitch breakdowns
-                </div>
-                <div className="check-item">
-                  <span className="blue-check">✔</span> Proven fundraising templates
-                </div>
-                <div className="check-item">
-                  <span className="blue-check">✔</span> Real venture deal examples
-                </div>
+              <div className="form-group">
+                <label>Password</label>
+                <input
+                  type="password"
+                  className="auth-input"
+                  placeholder="••••••••"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  required
+                />
               </div>
 
-              <div className="modal-bottom-links">
-                <span className="privacy-reassurance">Zero spam. Unsubscribe with 1 click anytime.</span>
-                <button type="button" className="skip-link-btn" onClick={handleNewsletterSkip}>
-                  Skip for now &rarr;
+              <button type="submit" className="auth-submit-btn">
+                {authMode === 'login' ? 'Sign In &rarr;' : 'Create Account &rarr;'}
+              </button>
+
+              <div className="auth-divider">
+                <span>OR 1-CLICK DEMO LOGIN FOR VIVA</span>
+              </div>
+
+              <div className="demo-accounts-row">
+                <button
+                  type="button"
+                  className="demo-account-pill"
+                  onClick={() => handleDemoLogin('Akshat Solanki', 'akshat@silveroak.edu.in')}
+                >
+                  Sign in as Akshat (Lead)
+                </button>
+                <button
+                  type="button"
+                  className="demo-account-pill"
+                  onClick={() => handleDemoLogin('Parth Bavalliya', 'parth@silveroak.edu.in')}
+                >
+                  Sign in as Parth (Lead)
                 </button>
               </div>
             </form>
@@ -899,10 +1549,10 @@ export default function App() {
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="simple-app-footer">
-        <span>PitchIQ &bull; AI-Powered Pitch Analysis & Venture Intelligence</span>
-        <span>Silver Oak University &bull; Dept. of Computer Engineering</span>
+      {/* Simple Footer */}
+      <footer className="simple-app-footer no-print">
+        <span>PitchIQ v2.0 &bull; Project ID: M2_CSE_027 &bull; Silver Oak University</span>
+        <span>Guide: Prof. Hemali Patel &bull; Department of Computer Engineering</span>
       </footer>
 
     </div>
