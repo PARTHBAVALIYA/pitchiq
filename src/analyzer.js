@@ -1,7 +1,7 @@
 // PitchIQ RAG & Case-Based Pitch Intelligence Engine v2.0
-// Powered by Shark Tank & YC Case-Grounded Retrieval
+// Powered by Venture Capital & Early Stage Case-Grounded Retrieval
 
-import { SHARK_TANK_CORPUS, SHARK_PERSONAS } from './data/sharkTankCorpus';
+import { VENTURE_DEAL_CORPUS, INVESTOR_PERSONAS } from './data/sharkTankCorpus';
 
 export function analyzePitch(text, pitchType = "Investor Pitch", audience = "Investors") {
   const clean = text.trim().replace(/\s+/g, ' ');
@@ -35,16 +35,16 @@ export function analyzePitch(text, pitchType = "Investor Pitch", audience = "Inv
 
   // Audience weighting
   let weightedOverall = (clarity * 0.18) + (hook * 0.20) + (structure * 0.18) + (persuasion * 0.22) + (cta * 0.12) + (confidence * 0.10);
-  if (audience === "Investors" || pitchType === "Shark Tank Pitch") {
+  if (audience === "Investors" || pitchType === "Investor Pitch") {
     weightedOverall = (clarity * 0.15) + (hook * 0.15) + (structure * 0.15) + (persuasion * 0.30) + (cta * 0.15) + (confidence * 0.10);
   }
   const overall = Math.round(weightedOverall);
 
-  // 3. RAG Retrieval over Shark Tank Corpus
+  // 3. RAG Retrieval over Venture Deal Corpus
   const pitchTokens = clean.toLowerCase().match(/\b[a-z]{3,}\b/g) || [];
   const tokenSet = new Set(pitchTokens);
 
-  const scoredCases = SHARK_TANK_CORPUS.map(c => {
+  const scoredCases = VENTURE_DEAL_CORPUS.map(c => {
     let matchScore = 0;
     c.keywords.forEach(kw => {
       if (tokenSet.has(kw) || t.includes(kw)) matchScore += 3;
@@ -54,9 +54,9 @@ export function analyzePitch(text, pitchType = "Investor Pitch", audience = "Inv
   }).sort((a, b) => b.matchScore - a.matchScore);
 
   // Top retrieved case studies
-  const topMatch = scoredCases[0] || SHARK_TANK_CORPUS[0];
-  const matchedFunded = scoredCases.find(c => c.outcome === "Funded") || SHARK_TANK_CORPUS[0];
-  const matchedRejected = scoredCases.find(c => c.outcome === "Rejected") || SHARK_TANK_CORPUS[1];
+  const topMatch = scoredCases[0] || VENTURE_DEAL_CORPUS[0];
+  const matchedFunded = scoredCases.find(c => c.outcome === "Funded") || VENTURE_DEAL_CORPUS[0];
+  const matchedRejected = scoredCases.find(c => c.outcome === "Rejected") || VENTURE_DEAL_CORPUS[1];
 
   // 4. Entity Extraction for Synthesis
   const nameMatch = clean.match(/\b(?:i'?m|my name is|i am)\s+([A-Z][a-z]+)/i);
@@ -86,22 +86,22 @@ export function analyzePitch(text, pitchType = "Investor Pitch", audience = "Inv
     mistakes.push("No explicit problem statement — Investors buy solutions to hair-on-fire problems. Without customer pain, you have a vitamin, not a painkiller.");
   }
   if (!hasNumber) {
-    mistakes.push(`Zero traction numbers — In the tank, ${matchedRejected.name} struggled when unit economics were vague. You need verified revenue, margins, or user counts.`);
+    mistakes.push(`Zero traction numbers — In venture funding, deals like ${matchedRejected.name} struggled when unit economics were vague. You need verified revenue, margins, or user counts.`);
   }
   if (!hasCTA) {
-    mistakes.push("Missing closing ask (Call-to-Action) — You walked into the pitch and never asked for the investment or sale.");
+    mistakes.push("Missing closing ask (Call-to-Action) — You walked through the pitch and never asked for the investment or next meeting.");
   }
   if (!hasHook) {
-    mistakes.push("Opening hook is too long (>14 words) — Shark Tank data shows investors decide attention within the first 10 seconds.");
+    mistakes.push("Opening hook is too long (>14 words) — Venture investor research shows listeners form an impression within the first 10 seconds.");
   }
   if (hasVagueClaim && !hasNumber) {
-    mistakes.push("Unsubstantiated hype adjectives ('amazing', 'unique') — Words without empirical proof trigger immediate skepticism.");
+    mistakes.push("Unsubstantiated hype adjectives ('amazing', 'unique') — Buzzwords without empirical proof trigger immediate skepticism.");
   }
   if (mistakes.length < 3) {
     mistakes.push("Unit Economics unspecified — Mention cost of goods (COGS), gross margins, or customer acquisition cost (CAC).");
   }
 
-  // 6. Actionable Improvements & Lessons Learned from Sharks
+  // 6. Actionable Improvements & Lessons Learned from Lead Investors
   const improvements = [];
   improvements.push(`Benchmark against ${matchedFunded.name} (${matchedFunded.outcome}): Open with their winning formula — "${matchedFunded.hook.slice(0, 95)}..."`);
   if (!hasProblem) {
@@ -111,22 +111,21 @@ export function analyzePitch(text, pitchType = "Investor Pitch", audience = "Inv
     improvements.push(`Add quantitative proof: State unit economics (e.g., "Cost to make: $3, Sells for: $18, with 70% gross margins and 1,200 active users").`);
   }
   if (!hasCTA) {
-    improvements.push(`End with a Shark Ask: "We are seeking $150,000 for 10% equity to scale our inventory and retail footprint. Join us."`);
+    improvements.push(`End with an Investor Ask: "We are seeking $150,000 for 10% equity to scale our inventory and distribution footprint. Join us."`);
   }
-  improvements.push(`Apply ${matchedFunded.investor || "the Sharks"}'s advice: "${matchedFunded.sharkFeedback}"`);
+  improvements.push(`Apply ${matchedFunded.investor || "the lead investor"}'s guidance: "${matchedFunded.investorFeedback}"`);
 
-  // 7. Shark Persona Reactions
-  const sharkReactions = SHARK_PERSONAS.map(p => ({
+  // 7. Investor Persona Reactions
+  const investorReactions = INVESTOR_PERSONAS.map(p => ({
     name: p.name,
-    avatar: p.avatar,
     archetype: p.archetype,
     feedback: p.evaluate({ clarity, hook, structure, persuasion, cta }, clean)
   }));
 
-  // 8. Shark-Grade Dynamic Rewrite (5-Step Winning Pitch Architecture)
+  // 8. Investor-Grade Dynamic Rewrite (5-Step Winning Pitch Architecture)
   const hookSentence = hasQuestion && rawSentences[0].includes('?')
     ? rawSentences[0]
-    : `Did you know that 85% of people struggle with inefficient, overpriced ${product}s every single day?`;
+    : `Did you know that 85% of customers struggle with inefficient, overpriced ${product}s every single day?`;
 
   const problemSentence = hasProblem
     ? (rawSentences.find(s => /problem|issue|pain|struggle/i.test(s)) || `There's a critical flaw in the current ${product} market that nobody is solving properly.`) + "."
@@ -135,20 +134,20 @@ export function analyzePitch(text, pitchType = "Investor Pitch", audience = "Inv
   const solutionSentence = `Hi, I'm ${speakerName}${companyName !== "our company" ? `, founder of ${companyName}` : ""}. We engineered a proprietary ${product} that completely solves this problem through ${benefit}.`;
 
   const tractionSentence = hasNumber
-    ? `In early testing, we have already achieved ${numbersFound.slice(0, 2).join(' and ')} in verified traction with 80%+ positive customer retention.`
+    ? `In early customer rollouts, we have already achieved ${numbersFound.slice(0, 2).join(' and ')} in verified traction with 80%+ positive customer retention.`
     : `With healthy unit economics and strong organic demand, we are delivering high margins while keeping customer acquisition costs low.`;
 
   const askSentence = hasCTA
     ? (rawSentences.find(s => /try|buy|visit|order|invest/i.test(s)) || `Try our ${product} today and experience the difference yourself.`) + "."
     : `We are scaling our operations today — visit ${companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com to partner with us.`;
 
-  const sharkGradeRewrite = `${hookSentence} ${problemSentence} ${solutionSentence} ${tractionSentence} ${askSentence}`;
+  const investorGradeRewrite = `${hookSentence} ${problemSentence} ${solutionSentence} ${tractionSentence} ${askSentence}`;
 
   const verdict = overall >= 80
-    ? "Shark-Ready: Exceptional balance of hook, quantifiable proof, and commercial viability. Ready for investor presentation."
+    ? "Investment-Ready: Exceptional balance of hook, quantifiable proof, and commercial viability. Ready for institutional investor presentations."
     : overall >= 60
     ? "Promising Concept: Strong foundational value, but needs harder unit economics (margins, CAC) and a more decisive closing ask."
-    : "High Rejection Risk: Sharks would likely say 'I'm out' due to lack of problem framing and missing traction proof points.";
+    : "High Rejection Risk: Institutional investors would pass due to lack of problem framing and missing traction proof points.";
 
   return {
     overall_score: overall,
@@ -166,10 +165,11 @@ export function analyzePitch(text, pitchType = "Investor Pitch", audience = "Inv
       funded_benchmark: matchedFunded,
       rejected_benchmark: matchedRejected
     },
-    shark_reactions: sharkReactions,
+    shark_reactions: investorReactions, // kept for backward-compatible prop in UI
+    investor_reactions: investorReactions,
     mistakes: mistakes.slice(0, 3),
     improvements: improvements.slice(0, 3),
-    rewritten_opening: sharkGradeRewrite,
+    rewritten_opening: investorGradeRewrite,
     winning_tags: [
       hasNumber ? "Traction Verified" : "Idea Stage",
       hasHook ? "Punchy Hook" : "Lengthy Opening",
@@ -188,7 +188,7 @@ export const PRESET_PITCHES = [
     title: "Enterprise B2B SaaS",
     type: "Investor Pitch",
     audience: "Investors",
-    text: "Did you know enterprise sales teams waste 15 hours a week manually prepping discovery pitches? Hi, I'm Parth, founder of PitchIQ. We build an automated RAG-powered speech coaching platform that analyzes sales scripts against 200+ Shark Tank deals. We already have 1,400 active sales reps, $24,000 in monthly recurring revenue, and 78% gross margins. We are raising $250,000 for 10% equity to scale our enterprise pipeline. Join us today."
+    text: "Did you know enterprise sales teams waste 15 hours a week manually prepping discovery pitches? Hi, I'm Parth, founder of PitchIQ. We build an automated speech coaching platform that analyzes sales scripts against 200+ funded venture deals. We already have 1,400 active sales reps, $24,000 in monthly recurring revenue, and 78% gross margins. We are raising $250,000 for 10% equity to scale our enterprise pipeline. Join us today."
   },
   {
     title: "Consumer Beverage Brand",
@@ -198,7 +198,7 @@ export const PRESET_PITCHES = [
   },
   {
     title: "Hardware Consumer IoT",
-    type: "Shark Tank Pitch",
+    type: "Investor Pitch",
     audience: "Investors",
     text: "How many times have you lost your keys or phone right when you are running late for an important meeting? We invented KeyPulse, a Bluetooth rechargeable tracker that flashes and rings at 110 decibels through walls. We hold two utility patents, and it costs us $4 to manufacture and retails for $29 with an 86% margin. We have sold 8,000 units on Amazon. We are seeking $100,000 for 10% equity."
   },

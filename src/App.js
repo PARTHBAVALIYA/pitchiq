@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { analyzePitch, PRESET_PITCHES } from './analyzer';
-import { SHARK_TANK_CORPUS } from './data/sharkTankCorpus';
+import { VENTURE_DEAL_CORPUS } from './data/sharkTankCorpus';
 import './App.css';
 
 export default function App() {
@@ -15,7 +15,7 @@ export default function App() {
     if (pitch.trim().length < 25 || loading) return;
     setLoading(true);
     setTimeout(() => {
-      const r = analyzePitch(pitch, 'Shark Tank Pitch', 'Investors');
+      const r = analyzePitch(pitch, 'Investor Pitch', 'Investors');
       setResult(r);
       setLoading(false);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -63,7 +63,7 @@ export default function App() {
           <p className="hero-eyebrow">AI-Powered Pitch Analysis</p>
           <h1 className="hero-title">How strong is your pitch?</h1>
           <p className="hero-sub">
-            Paste your pitch script below and get instant feedback grounded in real Shark Tank deals.
+            Paste your pitch script below and get instant feedback grounded in real venture capital & startup investment deals.
           </p>
         </div>
       </section>
@@ -169,12 +169,12 @@ export default function App() {
 
               {/* Card: Venture Match */}
               <div className="rcard">
-                <p className="rcard-title">Similar Deals</p>
+                <p className="rcard-title">Similar Venture Deals</p>
                 <div className="deal-item">
                   <span className="deal-dot funded" />
                   <div>
                     <p className="deal-name">{result.retrieved_case_studies.funded_benchmark.name}</p>
-                    <p className="deal-meta">Funded · {result.retrieved_case_studies.funded_benchmark.season} · {result.retrieved_case_studies.funded_benchmark.ask}</p>
+                    <p className="deal-meta">Funded · {result.retrieved_case_studies.funded_benchmark.stage || result.retrieved_case_studies.funded_benchmark.season} · {result.retrieved_case_studies.funded_benchmark.ask}</p>
                   </div>
                 </div>
                 <div className="deal-divider" />
@@ -182,7 +182,7 @@ export default function App() {
                   <span className="deal-dot cautionary" />
                   <div>
                     <p className="deal-name">{result.retrieved_case_studies.rejected_benchmark.name}</p>
-                    <p className="deal-meta">Cautionary · {result.retrieved_case_studies.rejected_benchmark.season} · {result.retrieved_case_studies.rejected_benchmark.ask}</p>
+                    <p className="deal-meta">Cautionary · {result.retrieved_case_studies.rejected_benchmark.stage || result.retrieved_case_studies.rejected_benchmark.season} · {result.retrieved_case_studies.rejected_benchmark.ask}</p>
                   </div>
                 </div>
                 <div className="quote-block">
@@ -194,7 +194,7 @@ export default function App() {
               {/* Card: Investor Reactions */}
               <div className="rcard">
                 <p className="rcard-title">Investor Reactions</p>
-                {result.shark_reactions.map((r, i) => (
+                {(result.investor_reactions || result.shark_reactions).map((r, i) => (
                   <div key={i} className="reaction">
                     <div className="reaction-head">
                       <span className="reaction-name">{r.name}</span>
@@ -253,7 +253,7 @@ export default function App() {
             <div className="modal-head">
               <div>
                 <h3 className="modal-title">Deal Database</h3>
-                <p className="modal-sub">{SHARK_TANK_CORPUS.length} Shark Tank deals used for analysis</p>
+                <p className="modal-sub">{VENTURE_DEAL_CORPUS.length} venture capital & angel investment deals used for benchmarking</p>
               </div>
               <button className="modal-close" onClick={() => setShowCorpus(false)}>&times;</button>
             </div>
@@ -263,7 +263,7 @@ export default function App() {
                   <tr><th>Company</th><th>Industry</th><th>Ask</th><th>Outcome</th><th>Key Lesson</th></tr>
                 </thead>
                 <tbody>
-                  {SHARK_TANK_CORPUS.map(c => (
+                  {VENTURE_DEAL_CORPUS.map(c => (
                     <tr key={c.id}>
                       <td className="bold">{c.name}</td>
                       <td>{c.industry}</td>
