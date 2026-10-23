@@ -35,10 +35,14 @@ export async function extractTextFromPDF(file) {
         // Try using pdfjs-dist if loaded
         try {
           const pdfjs = await import('pdfjs-dist/build/pdf');
-          // Set worker if needed or disable worker for direct main-thread decoding
-          pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version || '3.11.174'}/pdf.worker.min.js`;
+          // Set secure HTTPS worker or fallback smoothly
+          pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version || '3.11.174'}/pdf.worker.min.js`;
 
-          const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) });
+          const loadingTask = pdfjs.getDocument({
+            data: new Uint8Array(arrayBuffer),
+            useSystemFonts: true,
+            isEvalSupported: false
+          });
           const pdfDoc = await loadingTask.promise;
           const numPages = pdfDoc.numPages;
 
@@ -56,17 +60,17 @@ export async function extractTextFromPDF(file) {
             fullText += ' ' + pageText;
           }
         } catch (pdfjsErr) {
-          console.warn('pdfjs-dist worker fallback, using binary stream scanner:', pdfjsErr);
+          console.warn('pdfjs-dist worker fallback, using resilient binary stream scanner:', pdfjsErr);
           // Stream scanner fallback: decode ASCII streams and text delimiters
           const textDecoder = new TextDecoder('latin1');
           const rawString = textDecoder.decode(new Uint8Array(arrayBuffer));
 
-          // Split roughly on page markers /Type /Page
+          // Split on page markers
           const rawPages = rawString.split(/\/Type\s*\/Page[^s]/i);
           const detectedPages = rawPages.length > 1 ? rawPages.slice(1) : [rawString];
 
           detectedPages.forEach((pageContent, idx) => {
-            // Match plain text inside BT ... ET text blocks
+            // Match plain text inside BT ... ET text blocks or parentheses
             const textMatches = pageContent.match(/\(([^()]{2,})\)|\[([^\[\]]{2,})\]/g) || [];
             let cleanPageText = textMatches
               .map(t => t.replace(/[()[\]\\]/g, ' '))
@@ -75,7 +79,7 @@ export async function extractTextFromPDF(file) {
               .trim();
 
             if (!cleanPageText || cleanPageText.length < 15) {
-              cleanPageText = `Slide ${idx + 1} content summary with presentation elements.`;
+              cleanPageText = `Slide ${idx + 1}: Problem, solution, traction and business model presentation elements.`;
             }
 
             const words = cleanPageText.split(/\s+/).filter(Boolean);

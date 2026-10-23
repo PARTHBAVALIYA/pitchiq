@@ -4,13 +4,11 @@ import { VENTURE_DEAL_CORPUS } from './data/sharkTankCorpus';
 import { extractTextFromPDF, analyzePitchDeck } from './pdfDeckAnalyzer';
 import './App.css';
 
-// Initial seed history for immediate viva demonstration
+// Initial seed history for immediate demonstration
 const DEFAULT_USER = {
   name: 'Akshat Solanki',
-  email: 'akshat@silveroak.edu.in',
-  role: 'Founder / Student',
-  projectId: 'M2_CSE_027',
-  university: 'Silver Oak University'
+  email: 'akshat@pitchiq.ai',
+  role: 'Founder / Project Lead'
 };
 
 const INITIAL_HISTORY = [
@@ -82,6 +80,7 @@ export default function App() {
     }
   });
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -122,7 +121,7 @@ export default function App() {
   const [savedPitches, setSavedPitches] = useState(() => [
     {
       id: 'p-1',
-      title: 'PitchIQ - Enterprise SaaS',
+      title: 'PitchIQ - Main Enterprise Pitch',
       snippet: 'Did you know enterprise sales teams waste 15 hours a week manually prepping discovery pitches?...',
       score: 84,
       status: 'Analysed',
@@ -138,11 +137,19 @@ export default function App() {
     },
     {
       id: 'p-3',
-      title: 'Hardware IoT Pitch',
+      title: 'Hardware Consumer IoT Device',
       snippet: 'How many times have you lost your keys or phone right when you are running late for an important meeting?...',
       score: 74,
       status: 'Analysed',
       lastUpdated: '3 days ago'
+    },
+    {
+      id: 'p-4',
+      title: 'Unstructured Early Draft',
+      snippet: 'Our product is really amazing and has incredible goodness. We are the best team out there and our solution is completely unique...',
+      score: 48,
+      status: 'Draft',
+      lastUpdated: '5 days ago'
     }
   ]);
   const [savedFilter, setSavedFilter] = useState('all');
@@ -152,6 +159,7 @@ export default function App() {
   const [dbSearch, setDbSearch] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('All');
   const [selectedStage, setSelectedStage] = useState('All');
+  const [selectedOutcome, setSelectedOutcome] = useState('All');
 
   const fileInputRef = useRef(null);
 
@@ -173,9 +181,7 @@ export default function App() {
     const user = {
       name: authName.trim() || authEmail.split('@')[0],
       email: authEmail.trim(),
-      role: 'Founder / Researcher',
-      projectId: 'M2_CSE_027',
-      university: 'Silver Oak University'
+      role: 'Founder / Project Lead'
     };
     setCurrentUser(user);
     localStorage.setItem('pitchiq_auth_user', JSON.stringify(user));
@@ -189,9 +195,7 @@ export default function App() {
     const user = {
       name,
       email,
-      role: 'Project Lead',
-      projectId: 'M2_CSE_027',
-      university: 'Silver Oak University'
+      role: 'Founder / Project Lead'
     };
     setCurrentUser(user);
     localStorage.setItem('pitchiq_auth_user', JSON.stringify(user));
@@ -303,6 +307,13 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Filtered Saved Pitches
+  const filteredSavedPitches = savedPitches.filter(p => {
+    if (savedFilter === 'drafts') return p.status === 'Draft';
+    if (savedFilter === 'analysed') return p.status === 'Analysed';
+    return true;
+  });
+
   // Filtered Deal Database
   const filteredDeals = VENTURE_DEAL_CORPUS.filter(deal => {
     const matchesSearch = dbSearch === '' ||
@@ -311,11 +322,13 @@ export default function App() {
       deal.summary.toLowerCase().includes(dbSearch.toLowerCase());
     const matchesIndustry = selectedIndustry === 'All' || deal.industry === selectedIndustry;
     const matchesStage = selectedStage === 'All' || deal.stage.includes(selectedStage);
-    return matchesSearch && matchesIndustry && matchesStage;
+    const matchesOutcome = selectedOutcome === 'All' || deal.outcome.toLowerCase() === selectedOutcome.toLowerCase();
+    return matchesSearch && matchesIndustry && matchesStage && matchesOutcome;
   });
 
   const industriesList = ['All', ...new Set(VENTURE_DEAL_CORPUS.map(d => d.industry))];
   const stagesList = ['All', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'Angel'];
+  const outcomesList = ['All', 'Funded', 'Cautionary'];
 
   const score = result?.overall_score ?? 79;
   const verdictTitle = result?.verdict?.split(':')[0] || 'Promising Concept';
@@ -341,14 +354,20 @@ export default function App() {
               <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>
                 Home
               </button>
-              <button className="nav-item" onClick={() => setActiveTab('database')}>
-                Deal Database
+              <button className={`nav-item ${activeTab === 'results' ? 'active' : ''}`} onClick={() => setActiveTab('results')}>
+                Pitch Analysis
               </button>
-              <button className="nav-item" onClick={() => setActiveTab('history')}>
+              <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
                 Score Comparison
               </button>
-              <button className="nav-item" onClick={() => setActiveTab('saved')}>
+              <button className={`nav-item ${activeTab === 'database' ? 'active' : ''}`} onClick={() => setActiveTab('database')}>
+                Deal Database
+              </button>
+              <button className={`nav-item ${activeTab === 'saved' ? 'active' : ''}`} onClick={() => setActiveTab('saved')}>
                 Saved Pitches
+              </button>
+              <button className="nav-item" onClick={() => setShowHowItWorks(true)}>
+                How It Works
               </button>
             </nav>
 
@@ -366,7 +385,7 @@ export default function App() {
                     <div className="dropdown-user-info">
                       <strong>{currentUser.name}</strong>
                       <span className="dropdown-email">{currentUser.email}</span>
-                      <span className="dropdown-meta">Silver Oak Univ &bull; M2_CSE_027</span>
+                      <span className="dropdown-meta">{currentUser.role || 'Founder / Project Lead'}</span>
                     </div>
                     <div className="dropdown-divider" />
                     <button className="dropdown-item" onClick={() => { setActiveTab('history'); setUserDropdownOpen(false); }}>
@@ -627,11 +646,20 @@ export default function App() {
               </button>
             </nav>
 
-            {/* University & User Card */}
-            <div className="sidebar-project-card">
-              <div className="proj-title">Silver Oak University</div>
-              <p className="proj-code">Project ID: M2_CSE_027</p>
-              <p className="proj-guide">Guide: Prof. Hemali Patel</p>
+            {/* Upgrade to Pro Card */}
+            <div className="sidebar-pro-card">
+              <div className="pro-card-header">
+                <span className="pro-crown">👑</span>
+                <strong className="pro-title">Upgrade to Pro</strong>
+              </div>
+              <ul className="pro-features">
+                <li>✓ Unlimited analyses</li>
+                <li>✓ Advanced insights</li>
+                <li>✓ Export reports</li>
+              </ul>
+              <button className="pro-upgrade-btn" onClick={() => setShowAuthModal(true)}>
+                Upgrade
+              </button>
             </div>
           </aside>
 
@@ -703,239 +731,239 @@ export default function App() {
                 RESULTS VIEW (Pitch Analysis + Deck Structural Diagnostics)
             ══════════════════════════════════════════════════════════════ */}
             {activeTab === 'results' && result && (
-              <div className="results-grid-layout">
+              <div className="results-content-stack">
 
-                {/* Left Column: Score + Deck Diagnostic + 3 Bento Cards */}
-                <div className="results-primary-col">
-
-                  {/* Investability Score Banner Card */}
-                  <div className="card-panel score-banner-card">
-                    <div className="score-main-row">
-                      <div className="score-badge-circle">
-                        <span className="key-icon">🔑</span>
+                {/* Investability Score Banner Card */}
+                <div className="card-panel score-banner-card">
+                  <div className="score-main-row">
+                    <div className="score-badge-circle">
+                      <span className="key-icon">🔑</span>
+                    </div>
+                    <div className="score-details">
+                      <span className="score-sub-label">INVESTABILITY SCORE</span>
+                      <div className="score-value-row">
+                        <span className="score-big-number">{score}</span>
+                        <span className="score-fraction">/100</span>
                       </div>
-                      <div className="score-details">
-                        <span className="score-sub-label">INVESTABILITY SCORE</span>
-                        <div className="score-value-row">
-                          <span className="score-big-number">{score}</span>
-                          <span className="score-fraction">/100</span>
-                        </div>
-                        <div className="score-horizontal-bar">
-                          <div className="score-fill" style={{ width: `${score}%` }} />
-                        </div>
-                      </div>
-
-                      <div className="score-verdict-col">
-                        <div className="promising-concept-pill">
-                          <span className="leaf-icon">🌱</span> {verdictTitle}
-                        </div>
-                        <div className="tags-row">
-                          {result.winning_tags?.map(tag => (
-                            <span key={tag} className="gray-pill-tag">{tag}</span>
-                          ))}
-                        </div>
+                      <div className="score-horizontal-bar">
+                        <div className="score-fill" style={{ width: `${score}%` }} />
                       </div>
                     </div>
 
-                    {/* Progress Indicator Banner */}
-                    {pitchHistory.length > 1 && (
-                      <div className="revision-progress-banner">
-                        <span>
-                          <strong>Revision #{pitchHistory.length}</strong>: Scored {score}/100
-                          {scoreDelta !== 0 && (
-                            <span className={scoreDelta > 0 ? 'green-delta' : 'red-delta'}>
-                              {' '}({scoreDelta > 0 ? `+${scoreDelta}` : scoreDelta} pts vs previous)
-                            </span>
-                          )}
-                        </span>
-                        <button className="view-history-link" onClick={() => setActiveTab('history')}>
-                          View Full Score Progression &rarr;
-                        </button>
+                    <div className="score-verdict-col">
+                      <div className="promising-concept-pill">
+                        <span className="leaf-icon">🌱</span> {verdictTitle}
+                      </div>
+                      <div className="tags-row">
+                        {result.winning_tags?.map(tag => (
+                          <span key={tag} className="gray-pill-tag">{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Indicator Banner */}
+                  {pitchHistory.length > 1 && (
+                    <div className="revision-progress-banner">
+                      <span>
+                        <strong>Revision #{pitchHistory.length}</strong>: Scored {score}/100
+                        {scoreDelta !== 0 && (
+                          <span className={scoreDelta > 0 ? 'green-delta' : 'red-delta'}>
+                            {' '}({scoreDelta > 0 ? `+${scoreDelta}` : scoreDelta} pts vs previous)
+                          </span>
+                        )}
+                      </span>
+                      <button className="view-history-link" onClick={() => setActiveTab('history')}>
+                        View Full Score Progression &rarr;
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pitch Deck Diagnostic Card (Rendered if a PDF was analyzed) */}
+                {deckAnalysis && (
+                  <div className="card-panel deck-structure-card">
+                    <div className="panel-header">
+                      <span className="panel-icon">📑</span>
+                      <h3 className="panel-title">Pitch Deck Structural Breakdown ({deckAnalysis.totalSlides} Slides)</h3>
+                      <span className="deck-score-badge">Structural Score: {deckAnalysis.structuralScore}/100</span>
+                    </div>
+
+                    <p className="deck-diagnostic-sub">
+                      Analysis of slide coverage, narrative progression, and text density for presentation.
+                    </p>
+
+                    {/* 8 Required Slides Checklist */}
+                    <div className="deck-sections-grid">
+                      {deckAnalysis.sectionStatus.map(sec => (
+                        <div key={sec.id} className={`deck-sec-pill ${sec.detected ? 'detected' : 'missing'}`}>
+                          <span className="sec-check">{sec.detected ? '✔' : '✖'}</span>
+                          <span className="sec-name">{sec.name}</span>
+                          {sec.slide && <span className="sec-slide-num">Slide {sec.slide}</span>}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Deck Specific Flags */}
+                    {deckAnalysis.deckFlags.length > 0 && (
+                      <div className="deck-flags-subpanel">
+                        <strong>Presentation Slide Warnings:</strong>
+                        <ul>
+                          {deckAnalysis.deckFlags.map((flag, i) => (
+                            <li key={i}>{flag}</li>
+                          ))}
+                        </ul>
                       </div>
                     )}
                   </div>
+                )}
 
-                  {/* Pitch Deck Diagnostic Card (Rendered if a PDF was analyzed) */}
-                  {deckAnalysis && (
-                    <div className="card-panel deck-structure-card">
-                      <div className="panel-header">
-                        <span className="panel-icon">📑</span>
-                        <h3 className="panel-title">Pitch Deck Structural Breakdown ({deckAnalysis.totalSlides} Slides)</h3>
-                        <span className="deck-score-badge">Structural Score: {deckAnalysis.structuralScore}/100</span>
-                      </div>
-
-                      <p className="deck-diagnostic-sub">
-                        Analysis of slide coverage, narrative progression, and text density for presentation.
-                      </p>
-
-                      {/* 8 Required Slides Checklist */}
-                      <div className="deck-sections-grid">
-                        {deckAnalysis.sectionStatus.map(sec => (
-                          <div key={sec.id} className={`deck-sec-pill ${sec.detected ? 'detected' : 'missing'}`}>
-                            <span className="sec-check">{sec.detected ? '✔' : '✖'}</span>
-                            <span className="sec-name">{sec.name}</span>
-                            {sec.slide && <span className="sec-slide-num">Slide {sec.slide}</span>}
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Deck Specific Flags */}
-                      {deckAnalysis.deckFlags.length > 0 && (
-                        <div className="deck-flags-subpanel">
-                          <strong>Presentation Slide Warnings:</strong>
-                          <ul>
-                            {deckAnalysis.deckFlags.map((flag, i) => (
-                              <li key={i}>{flag}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* 3-Cards Row */}
-                  <div className="bento-row">
-                    {/* Card 1: 6-Factor Analysis */}
-                    <div className="card-panel factor-analysis-card">
-                      <div className="panel-header">
-                        <span className="panel-icon">📊</span>
-                        <h3 className="panel-title">Pitch Analysis</h3>
-                      </div>
-
-                      <div className="factors-list">
-                        {Object.entries(result.metrics).map(([factorName, factorVal]) => (
-                          <div key={factorName} className="factor-row">
-                            <span className="factor-name">{factorName}</span>
-                            <div className="factor-progress-track">
-                              <div
-                                className="factor-progress-fill"
-                                style={{ width: `${factorVal}%` }}
-                              />
-                            </div>
-                            <span className="factor-number">{factorVal}</span>
-                          </div>
-                        ))}
-                      </div>
+                {/* 3 Bento Cards Row */}
+                <div className="bento-row">
+                  {/* Card 1: 6-Factor Analysis */}
+                  <div className="card-panel factor-analysis-card">
+                    <div className="panel-header">
+                      <span className="panel-icon">📊</span>
+                      <h3 className="panel-title">Pitch Analysis</h3>
                     </div>
 
-                    {/* Card 2: Similar Venture Deals */}
-                    <div className="card-panel deals-benchmark-card">
-                      <div className="panel-header">
-                        <span className="panel-icon">🏛️</span>
-                        <h3 className="panel-title">Similar Venture Deals</h3>
+                    <div className="factors-list">
+                      {Object.entries(result.metrics).map(([factorName, factorVal]) => (
+                        <div key={factorName} className="factor-row">
+                          <span className="factor-name">{factorName}</span>
+                          <div className="factor-progress-track">
+                            <div
+                              className="factor-progress-fill"
+                              style={{ width: `${factorVal}%` }}
+                            />
+                          </div>
+                          <span className="factor-number">{factorVal}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Card 2: Similar Venture Deals */}
+                  <div className="card-panel deals-benchmark-card">
+                    <div className="panel-header">
+                      <span className="panel-icon">🏛️</span>
+                      <h3 className="panel-title">Similar Venture Deals</h3>
+                    </div>
+
+                    <div className="deals-items-stack">
+                      <div className="deal-entry">
+                        <span className="deal-indicator funded-dot" />
+                        <div className="deal-info">
+                          <div className="deal-title">{result.retrieved_case_studies.funded_benchmark.name}</div>
+                          <div className="deal-meta-line">
+                            Funded &bull; {result.retrieved_case_studies.funded_benchmark.stage || 'Seed'} &bull; {result.retrieved_case_studies.funded_benchmark.ask}
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="deals-items-stack">
-                        <div className="deal-entry">
-                          <span className="deal-indicator funded-dot" />
-                          <div className="deal-info">
-                            <div className="deal-title">{result.retrieved_case_studies.funded_benchmark.name}</div>
-                            <div className="deal-meta-line">
-                              Funded &bull; {result.retrieved_case_studies.funded_benchmark.stage || 'Seed'} &bull; {result.retrieved_case_studies.funded_benchmark.ask}
-                            </div>
+                      <div className="deal-entry">
+                        <span className="deal-indicator cautionary-dot" />
+                        <div className="deal-info">
+                          <div className="deal-title">{result.retrieved_case_studies.rejected_benchmark.name}</div>
+                          <div className="deal-meta-line">
+                            Cautionary &bull; {result.retrieved_case_studies.rejected_benchmark.stage || 'Series A'} &bull; {result.retrieved_case_studies.rejected_benchmark.ask}
                           </div>
                         </div>
+                      </div>
 
-                        <div className="deal-entry">
-                          <span className="deal-indicator cautionary-dot" />
-                          <div className="deal-info">
-                            <div className="deal-title">{result.retrieved_case_studies.rejected_benchmark.name}</div>
-                            <div className="deal-meta-line">
-                              Cautionary &bull; {result.retrieved_case_studies.rejected_benchmark.stage || 'Series A'} &bull; {result.retrieved_case_studies.rejected_benchmark.ask}
-                            </div>
+                      <div className="deal-hook-quote-box">
+                        <p className="hook-quote-text">
+                          "{result.retrieved_case_studies.funded_benchmark.hook}"
+                        </p>
+                        <span className="hook-attribution">
+                          Winning hook &mdash; {result.retrieved_case_studies.funded_benchmark.name}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Investor Reactions */}
+                  <div className="card-panel investor-panel-card">
+                    <div className="panel-header">
+                      <span className="panel-icon">👔</span>
+                      <h3 className="panel-title">Investor Reactions</h3>
+                    </div>
+
+                    <div className="investor-quotes-list">
+                      {(result.investor_reactions || result.shark_reactions || []).map((reaction, i) => (
+                        <div key={i} className="investor-reaction-block">
+                          <div className="investor-head">
+                            <span className="investor-role">{reaction.name}</span>
+                            <span className="investor-badge">{reaction.archetype}</span>
                           </div>
-                        </div>
-
-                        <div className="deal-hook-quote-box">
-                          <p className="hook-quote-text">
-                            "{result.retrieved_case_studies.funded_benchmark.hook}"
+                          <p className="investor-comment">
+                            "{reaction.feedback}"
                           </p>
-                          <span className="hook-attribution">
-                            Winning hook &mdash; {result.retrieved_case_studies.funded_benchmark.name}
-                          </span>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Card 3: Investor Reactions */}
-                    <div className="card-panel investor-panel-card">
-                      <div className="panel-header">
-                        <span className="panel-icon">👔</span>
-                        <h3 className="panel-title">Investor Reactions</h3>
-                      </div>
-
-                      <div className="investor-quotes-list">
-                        {(result.investor_reactions || result.shark_reactions || []).map((reaction, i) => (
-                          <div key={i} className="investor-reaction-block">
-                            <div className="investor-head">
-                              <span className="investor-role">{reaction.name}</span>
-                              <span className="investor-badge">{reaction.archetype}</span>
-                            </div>
-                            <p className="investor-comment">
-                              "{reaction.feedback}"
-                            </p>
-                          </div>
-                        ))}
-                      </div>
+                      ))}
                     </div>
                   </div>
                 </div>
 
-                {/* Right Column: Detailed Feedback */}
-                <div className="results-secondary-col">
-                  <div className="detailed-feedback-wrapper">
-
-                    {/* Suggested Opening Rewrite Card */}
-                    <div className="card-panel rewrite-panel">
-                      <div className="panel-header-split">
-                        <div className="panel-header">
-                          <span className="panel-icon-bulb">💡</span>
-                          <h3 className="panel-title">Suggested Opening Rewrite</h3>
-                        </div>
-                        <button className="copy-action-btn" onClick={handleCopyRewrite}>
-                          {copied ? 'Copied ✓' : '📋 Copy'}
-                        </button>
+                {/* Detailed Feedback: Suggested Rewrite + Critical Flags */}
+                <div className="detailed-feedback-row">
+                  {/* Suggested Opening Rewrite Card */}
+                  <div className="card-panel rewrite-panel">
+                    <div className="panel-header-split">
+                      <div className="panel-header">
+                        <span className="panel-icon-bulb">💡</span>
+                        <h3 className="panel-title">Suggested Opening Rewrite</h3>
                       </div>
-
-                      <p className="rewrite-content-text">
-                        {result.rewritten_opening}
-                      </p>
-                    </div>
-
-                    {/* Critical Flags Card */}
-                    <div className="card-panel flags-panel">
-                      <div className="flags-header">
-                        <span className="alert-triangle">⚠️</span>
-                        <h3 className="flags-title">Critical Flags</h3>
-                      </div>
-
-                      <ul className="flags-bullet-list">
-                        {result.mistakes?.map((flag, idx) => (
-                          <li key={idx} className="flag-bullet-item">
-                            <span className="bullet-point">&bull;</span>
-                            <span className="flag-text">{flag}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="results-bottom-actions">
-                      <button
-                        className="edit-pitch-btn"
-                        onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                      >
-                        &larr; Edit Pitch
-                      </button>
-
-                      <button
-                        className="download-pdf-cta"
-                        onClick={() => setShowReportModal(true)}
-                      >
-                        📥 Download Full Report (PDF)
+                      <button className="copy-action-btn" onClick={handleCopyRewrite}>
+                        {copied ? 'Copied ✓' : '📋 Copy'}
                       </button>
                     </div>
 
+                    <p className="rewrite-content-text">
+                      {result.rewritten_opening}
+                    </p>
+                  </div>
+
+                  {/* Critical Flags Card */}
+                  <div className="card-panel flags-panel">
+                    <div className="flags-header">
+                      <span className="alert-triangle">⚠️</span>
+                      <h3 className="flags-title">Critical Flags</h3>
+                    </div>
+
+                    <ul className="flags-bullet-list">
+                      {result.mistakes?.map((flag, idx) => (
+                        <li key={idx} className="flag-bullet-item">
+                          <span className="bullet-point">&bull;</span>
+                          <span className="flag-text">{flag}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Results Bottom Actions */}
+                <div className="results-bottom-actions">
+                  <button
+                    className="edit-pitch-btn"
+                    onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  >
+                    &larr; Edit Pitch
+                  </button>
+
+                  <div className="actions-right-cluster">
+                    <button
+                      className="secondary-action-btn"
+                      onClick={handleSaveCurrentPitch}
+                    >
+                      💾 {saveSuccessMsg ? 'Saved! ✓' : 'Save Pitch'}
+                    </button>
+                    <button
+                      className="download-pdf-cta"
+                      onClick={() => setShowReportModal(true)}
+                    >
+                      📥 Download Full Report (PDF)
+                    </button>
                   </div>
                 </div>
 
@@ -1161,9 +1189,19 @@ export default function App() {
                       ))}
                     </select>
 
+                    <select
+                      className="filter-select"
+                      value={selectedOutcome}
+                      onChange={(e) => setSelectedOutcome(e.target.value)}
+                    >
+                      {outcomesList.map(out => (
+                        <option key={out} value={out}>{out === 'All' ? 'All Outcomes ▾' : out}</option>
+                      ))}
+                    </select>
+
                     <button
                       className="clear-filter-btn"
-                      onClick={() => { setDbSearch(''); setSelectedIndustry('All'); setSelectedStage('All'); }}
+                      onClick={() => { setDbSearch(''); setSelectedIndustry('All'); setSelectedStage('All'); setSelectedOutcome('All'); }}
                     >
                       Clear
                     </button>
@@ -1246,20 +1284,20 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {savedPitches.map((saved) => (
+                      {filteredSavedPitches.map((saved) => (
                         <tr key={saved.id}>
                           <td className="saved-title-cell">
                             <strong>{saved.title}</strong>
                             <p className="saved-snippet">{saved.snippet}</p>
                           </td>
                           <td>
-                            <span className={`table-score-pill ${saved.score >= 75 ? 'green' : 'amber'}`}>
+                            <span className={`table-score-pill ${saved.score >= 75 ? 'green' : saved.score >= 60 ? 'amber' : 'gray'}`}>
                               {saved.score}
                             </span>
                           </td>
                           <td className="date-cell">{saved.lastUpdated}</td>
                           <td>
-                            <span className="status-tag analysed">
+                            <span className={`status-tag ${saved.status.toLowerCase()}`}>
                               {saved.status}
                             </span>
                           </td>
@@ -1270,6 +1308,16 @@ export default function App() {
                               onClick={() => { setPitch(saved.snippet); setActiveTab('home'); }}
                             >
                               ✏️
+                            </button>
+                            <button
+                              className="action-icon-btn"
+                              title="Share Pitch Link"
+                              onClick={() => {
+                                navigator.clipboard?.writeText?.(window.location.href);
+                                alert('Pitch link copied to clipboard!');
+                              }}
+                            >
+                              🔗
                             </button>
                             <button
                               className="action-icon-btn"
@@ -1525,21 +1573,21 @@ export default function App() {
               </button>
 
               <div className="auth-divider">
-                <span>OR 1-CLICK DEMO LOGIN FOR VIVA</span>
+                <span>OR 1-CLICK DEMO LOGIN</span>
               </div>
 
               <div className="demo-accounts-row">
                 <button
                   type="button"
                   className="demo-account-pill"
-                  onClick={() => handleDemoLogin('Akshat Solanki', 'akshat@silveroak.edu.in')}
+                  onClick={() => handleDemoLogin('Akshat Solanki', 'akshat@pitchiq.ai')}
                 >
                   Sign in as Akshat (Lead)
                 </button>
                 <button
                   type="button"
                   className="demo-account-pill"
-                  onClick={() => handleDemoLogin('Parth Bavalliya', 'parth@silveroak.edu.in')}
+                  onClick={() => handleDemoLogin('Parth Bavalliya', 'parth@pitchiq.ai')}
                 >
                   Sign in as Parth (Lead)
                 </button>
@@ -1549,10 +1597,77 @@ export default function App() {
         </div>
       )}
 
+      {/* ══════════════════════════════════════════════════════════════
+          HOW IT WORKS MODAL
+      ══════════════════════════════════════════════════════════════ */}
+      {showHowItWorks && (
+        <div className="overlay-backdrop" onClick={() => setShowHowItWorks(false)}>
+          <div className="how-it-works-modal" onClick={e => e.stopPropagation()}>
+            <div className="how-modal-header">
+              <div className="how-title-lockup">
+                <span className="how-icon">💡</span>
+                <h3>How PitchIQ Evaluates Your Pitch</h3>
+              </div>
+              <button className="modal-close-cross" onClick={() => setShowHowItWorks(false)}>
+                &times;
+              </button>
+            </div>
+
+            <p className="how-intro">
+              PitchIQ uses a Retrieval-Augmented Pitch Evaluation model grounded in 200+ actual venture capital deals and institutional VC decision frameworks.
+            </p>
+
+            <div className="how-steps-grid">
+              <div className="how-step-card">
+                <span className="how-step-num">01</span>
+                <strong>10-Second Hook</strong>
+                <p>Listeners decide in the first 10 seconds. Your opening sentence must capture attention and frame an urgent problem in under 14 words.</p>
+              </div>
+
+              <div className="how-step-card">
+                <span className="how-step-num">02</span>
+                <strong>Problem Definition</strong>
+                <p>Quantify customer agony. Investors fund painkillers, not vitamins. Explicitly highlight wasted money, lost time, or manual friction.</p>
+              </div>
+
+              <div className="how-step-card">
+                <span className="how-step-num">03</span>
+                <strong>Proprietary Solution</strong>
+                <p>Present a clear, demonstrable product value proposition that solves the customer pain without technical fluff.</p>
+              </div>
+
+              <div className="how-step-card">
+                <span className="how-step-num">04</span>
+                <strong>Unit Economics & Traction</strong>
+                <p>Ground your story in numbers: verified users, revenue, gross margins (60%+), and low customer acquisition costs (CAC).</p>
+              </div>
+
+              <div className="how-step-card">
+                <span className="how-step-num">05</span>
+                <strong>Decisive Funding Ask</strong>
+                <p>Never conclude without an explicit Call-to-Action. State your exact equity ask, dollar amount, and specific capital runway.</p>
+              </div>
+
+              <div className="how-step-card">
+                <span className="how-step-num">06</span>
+                <strong>Case Precedent Matching</strong>
+                <p>PitchIQ matches your pitch to both funded winners and cautionary precedents to alert you of fatal blindspots early.</p>
+              </div>
+            </div>
+
+            <div className="how-modal-footer">
+              <button className="primary-gradient-btn" onClick={() => setShowHowItWorks(false)}>
+                Got It &mdash; Let's Analyze! &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Simple Footer */}
       <footer className="simple-app-footer no-print">
-        <span>PitchIQ v2.0 &bull; Project ID: M2_CSE_027 &bull; Silver Oak University</span>
-        <span>Guide: Prof. Hemali Patel &bull; Department of Computer Engineering</span>
+        <span>PitchIQ &bull; AI-Powered Pitch Analysis & Investor Benchmark</span>
+        <span>Transform your startup scripts & slide decks into investment-ready pitches</span>
       </footer>
 
     </div>
