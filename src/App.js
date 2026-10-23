@@ -8,10 +8,16 @@ export default function App() {
   const [result, setResult]     = useState(null);
   const [loading, setLoading]   = useState(false);
   const [showCorpus, setShowCorpus] = useState(false);
+  const [showNewsletter, setShowNewsletter] = useState(false);
+  const [email, setEmail]       = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [hasSubscribed, setHasSubscribed] = useState(() => {
+    return Boolean(localStorage.getItem('pitchiq_newsletter_joined'));
+  });
   const [copied, setCopied]     = useState(false);
   const resultsRef              = useRef(null);
 
-  const handleAnalyze = () => {
+  const executeAnalysis = () => {
     if (pitch.trim().length < 25 || loading) return;
     setLoading(true);
     setTimeout(() => {
@@ -20,6 +26,47 @@ export default function App() {
       setLoading(false);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     }, 800);
+  };
+
+  const handleAnalyzeClick = () => {
+    if (pitch.trim().length < 25 || loading) return;
+    if (!hasSubscribed) {
+      setShowNewsletter(true);
+    } else {
+      executeAnalysis();
+    }
+  };
+
+  const handleNewsletterSubmit = (e) => {
+    e.preventDefault();
+    const cleanEmail = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      setEmailError('Please enter a valid email address.');
+      return;
+    }
+
+    try {
+      localStorage.setItem('pitchiq_newsletter_joined', cleanEmail);
+      const existing = JSON.parse(localStorage.getItem('pitchiq_subscribers') || '[]');
+      if (!existing.includes(cleanEmail)) {
+        existing.push(cleanEmail);
+        localStorage.setItem('pitchiq_subscribers', JSON.stringify(existing));
+      }
+    } catch (err) {
+      // ignore local storage errors
+    }
+
+    setHasSubscribed(true);
+    setShowNewsletter(false);
+    setEmailError('');
+    executeAnalysis();
+  };
+
+  const handleNewsletterSkip = () => {
+    setShowNewsletter(false);
+    setEmailError('');
+    executeAnalysis();
   };
 
   const handlePreset = (preset) => {
@@ -96,7 +143,7 @@ export default function App() {
             <span className="word-count">{wordCount > 0 ? `${wordCount} words` : ''}</span>
             <button
               className="analyze-btn"
-              onClick={handleAnalyze}
+              onClick={handleAnalyzeClick}
               disabled={pitch.trim().length < 25 || loading}
             >
               {loading
@@ -244,6 +291,48 @@ export default function App() {
 
           </div>
         </section>
+      )}
+
+      {/* ── Newsletter Modal ── */}
+      {showNewsletter && (
+        <div className="overlay" onClick={() => setShowNewsletter(false)}>
+          <div className="newsletter-card" onClick={e => e.stopPropagation()}>
+            <button className="modal-close-corner" onClick={() => setShowNewsletter(false)} aria-label="Close">
+              &times;
+            </button>
+            
+            <div className="newsletter-badge">FOUNDER NEWSLETTER</div>
+            <h3 className="newsletter-title">Unlock Your Pitch Rating</h3>
+            <p className="newsletter-sub">
+              Join 4,200+ founders receiving weekly pitch breakdowns, fundraising templates, and venture teardowns directly in their inbox.
+            </p>
+
+            <form onSubmit={handleNewsletterSubmit} className="newsletter-form">
+              <div className="newsletter-input-group">
+                <input
+                  type="email"
+                  className={`newsletter-input ${emailError ? 'error' : ''}`}
+                  placeholder="Enter your email (e.g. founder@company.com)"
+                  value={email}
+                  onChange={e => { setEmail(e.target.value); setEmailError(''); }}
+                  autoFocus
+                />
+                {emailError && <span className="newsletter-error">{emailError}</span>}
+              </div>
+
+              <button type="submit" className="newsletter-btn">
+                Unlock Pitch Score &rarr;
+              </button>
+
+              <div className="newsletter-actions">
+                <span className="newsletter-note">Zero spam. Unsubscribe with 1 click anytime.</span>
+                <button type="button" className="newsletter-skip" onClick={handleNewsletterSkip}>
+                  Skip for now &rarr;
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* ── Corpus Modal ── */}
