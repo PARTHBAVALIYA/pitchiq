@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { analyzePitch, PRESET_PITCHES } from './analyzer';
-import { VENTURE_DEAL_CORPUS } from './data/sharkTankCorpus';
 import { extractTextFromPDF, analyzePitchDeck } from './pdfDeckAnalyzer';
 import {
   openDatabase,
@@ -74,7 +73,7 @@ const INITIAL_HISTORY = [
 
 export default function App() {
   // Navigation & User State
-  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'results' | 'deck_results' | 'database' | 'history' | 'saved'
+  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'results' | 'deck_results' | 'history' | 'saved'
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const stored = localStorage.getItem('pitchiq_auth_user');
@@ -123,49 +122,10 @@ export default function App() {
   const [compareRevA, setCompareRevA] = useState(0);
   const [compareRevB, setCompareRevB] = useState(pitchHistory.length - 1);
 
-  // Saved Pitches State
-  const [savedPitches, setSavedPitches] = useState(() => [
-    {
-      id: 'p-1',
-      title: 'PitchIQ - Main Enterprise Pitch',
-      snippet: 'Did you know enterprise sales teams waste 15 hours a week manually prepping discovery pitches?...',
-      score: 84,
-      status: 'Analysed',
-      lastUpdated: 'Today'
-    },
-    {
-      id: 'p-2',
-      title: 'Consumer Beverage Brand',
-      snippet: 'Hi, I\'m Parth, founder of King Water company. We bring pure Himalayan spring water infused with natural gold dust...',
-      score: 68,
-      status: 'Analysed',
-      lastUpdated: 'Yesterday'
-    },
-    {
-      id: 'p-3',
-      title: 'Hardware Consumer IoT Device',
-      snippet: 'How many times have you lost your keys or phone right when you are running late for an important meeting?...',
-      score: 74,
-      status: 'Analysed',
-      lastUpdated: '3 days ago'
-    },
-    {
-      id: 'p-4',
-      title: 'Unstructured Early Draft',
-      snippet: 'Our product is really amazing and has incredible goodness. We are the best team out there and our solution is completely unique...',
-      score: 48,
-      status: 'Draft',
-      lastUpdated: '5 days ago'
-    }
-  ]);
+  // Saved Pitches State (starts completely empty for every new user)
+  const [savedPitches, setSavedPitches] = useState([]);
   const [savedFilter, setSavedFilter] = useState('all');
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
-
-  // Deal Database Filters
-  const [dbSearch, setDbSearch] = useState('');
-  const [selectedIndustry, setSelectedIndustry] = useState('All');
-  const [selectedStage, setSelectedStage] = useState('All');
-  const [selectedOutcome, setSelectedOutcome] = useState('All');
 
   const fileInputRef = useRef(null);
 
@@ -176,7 +136,10 @@ export default function App() {
 
   // 2. Sync user-specific history and saved pitches from working database
   useEffect(() => {
-    if (!currentUser?.email) return;
+    if (!currentUser?.email) {
+      setSavedPitches([]);
+      return;
+    }
 
     dbGetHistory(currentUser.email).then(history => {
       if (history && history.length > 0) {
@@ -187,9 +150,7 @@ export default function App() {
     }).catch(console.warn);
 
     dbGetSavedPitches(currentUser.email).then(saved => {
-      if (saved && saved.length > 0) {
-        setSavedPitches(saved);
-      }
+      setSavedPitches(saved || []);
     }).catch(console.warn);
   }, [currentUser?.email]);
 
@@ -243,6 +204,7 @@ export default function App() {
 
   const handleLogout = () => {
     setCurrentUser(null);
+    setSavedPitches([]);
     localStorage.removeItem('pitchiq_auth_user');
     setUserDropdownOpen(false);
   };
@@ -369,22 +331,6 @@ export default function App() {
     if (savedFilter === 'analysed') return p.status === 'Analysed';
     return true;
   });
-
-  // Filtered Deal Database
-  const filteredDeals = VENTURE_DEAL_CORPUS.filter(deal => {
-    const matchesSearch = dbSearch === '' ||
-      deal.name.toLowerCase().includes(dbSearch.toLowerCase()) ||
-      deal.industry.toLowerCase().includes(dbSearch.toLowerCase()) ||
-      deal.summary.toLowerCase().includes(dbSearch.toLowerCase());
-    const matchesIndustry = selectedIndustry === 'All' || deal.industry === selectedIndustry;
-    const matchesStage = selectedStage === 'All' || deal.stage.includes(selectedStage);
-    const matchesOutcome = selectedOutcome === 'All' || deal.outcome.toLowerCase() === selectedOutcome.toLowerCase();
-    return matchesSearch && matchesIndustry && matchesStage && matchesOutcome;
-  });
-
-  const industriesList = ['All', ...new Set(VENTURE_DEAL_CORPUS.map(d => d.industry))];
-  const stagesList = ['All', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'Angel'];
-  const outcomesList = ['All', 'Funded', 'Cautionary'];
 
   const score = result?.overall_score ?? 79;
   const verdictTitle = result?.verdict?.split(':')[0] || 'Promising Concept';
@@ -515,9 +461,6 @@ export default function App() {
               </button>
               <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
                 Score Comparison
-              </button>
-              <button className={`nav-item ${activeTab === 'database' ? 'active' : ''}`} onClick={() => setActiveTab('database')}>
-                Deal Database
               </button>
               <button className={`nav-item ${activeTab === 'saved' ? 'active' : ''}`} onClick={() => setActiveTab('saved')}>
                 Saved Pitches
@@ -785,14 +728,6 @@ export default function App() {
               </button>
 
               <button
-                className={`sidebar-link ${activeTab === 'database' ? 'active' : ''}`}
-                onClick={() => setActiveTab('database')}
-              >
-                <span className="sidebar-icon">🏛️</span>
-                Deal Database
-              </button>
-
-              <button
                 className={`sidebar-link ${activeTab === 'saved' ? 'active' : ''}`}
                 onClick={() => setActiveTab('saved')}
               >
@@ -834,12 +769,6 @@ export default function App() {
                   <>
                     <h2 className="page-heading">Pitch History & Score Comparison</h2>
                     <p className="page-subheading">Track your progress across iterations and compare exact criteria deltas.</p>
-                  </>
-                )}
-                {activeTab === 'database' && (
-                  <>
-                    <h2 className="page-heading">Deal Database</h2>
-                    <p className="page-subheading">Explore real venture deals and find similar companies to your pitch.</p>
                   </>
                 )}
                 {activeTab === 'saved' && (
@@ -1307,99 +1236,6 @@ export default function App() {
             )}
 
             {/* ══════════════════════════════════════════════════════════════
-                DEAL DATABASE VIEW
-            ══════════════════════════════════════════════════════════════ */}
-            {activeTab === 'database' && (
-              <div className="database-view-panel">
-                <div className="database-controls-bar">
-                  <div className="search-input-wrapper">
-                    <span className="search-icon">🔍</span>
-                    <input
-                      type="text"
-                      className="db-search-input"
-                      placeholder="Search companies, industries or keywords..."
-                      value={dbSearch}
-                      onChange={(e) => setDbSearch(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="filter-dropdowns">
-                    <select
-                      className="filter-select"
-                      value={selectedIndustry}
-                      onChange={(e) => setSelectedIndustry(e.target.value)}
-                    >
-                      {industriesList.map(ind => (
-                        <option key={ind} value={ind}>{ind === 'All' ? 'All Industries ▾' : ind}</option>
-                      ))}
-                    </select>
-
-                    <select
-                      className="filter-select"
-                      value={selectedStage}
-                      onChange={(e) => setSelectedStage(e.target.value)}
-                    >
-                      {stagesList.map(st => (
-                        <option key={st} value={st}>{st === 'All' ? 'All Stages ▾' : st}</option>
-                      ))}
-                    </select>
-
-                    <select
-                      className="filter-select"
-                      value={selectedOutcome}
-                      onChange={(e) => setSelectedOutcome(e.target.value)}
-                    >
-                      {outcomesList.map(out => (
-                        <option key={out} value={out}>{out === 'All' ? 'All Outcomes ▾' : out}</option>
-                      ))}
-                    </select>
-
-                    <button
-                      className="clear-filter-btn"
-                      onClick={() => { setDbSearch(''); setSelectedIndustry('All'); setSelectedStage('All'); setSelectedOutcome('All'); }}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-
-                <div className="table-responsive-card">
-                  <table className="deal-data-table">
-                    <thead>
-                      <tr>
-                        <th>Company</th>
-                        <th>Industry</th>
-                        <th>Stage</th>
-                        <th>Amount</th>
-                        <th>Equity</th>
-                        <th>Year</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredDeals.map(deal => (
-                        <tr key={deal.id}>
-                          <td className="company-cell">
-                            <span className="company-logo-dot" />
-                            <strong>{deal.name}</strong>
-                          </td>
-                          <td>
-                            <span className="table-industry-pill">{deal.industry}</span>
-                          </td>
-                          <td>
-                            <span className="table-stage-pill">{deal.stage}</span>
-                          </td>
-                          <td className="amount-cell">{deal.amount}</td>
-                          <td className="equity-cell">{deal.equity}</td>
-                          <td className="year-cell">{deal.year}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════════
                 SAVED PITCHES VIEW
             ══════════════════════════════════════════════════════════════ */}
             {activeTab === 'saved' && (
@@ -1427,66 +1263,82 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="table-responsive-card">
-                  <table className="saved-data-table">
-                    <thead>
-                      <tr>
-                        <th>Title</th>
-                        <th>Score</th>
-                        <th>Last Updated</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredSavedPitches.map((saved) => (
-                        <tr key={saved.id}>
-                          <td className="saved-title-cell">
-                            <strong>{saved.title}</strong>
-                            <p className="saved-snippet">{saved.snippet}</p>
-                          </td>
-                          <td>
-                            <span className={`table-score-pill ${saved.score >= 75 ? 'green' : saved.score >= 60 ? 'amber' : 'gray'}`}>
-                              {saved.score}
-                            </span>
-                          </td>
-                          <td className="date-cell">{saved.lastUpdated}</td>
-                          <td>
-                            <span className={`status-tag ${saved.status.toLowerCase()}`}>
-                              {saved.status}
-                            </span>
-                          </td>
-                          <td className="actions-cell">
-                            <button
-                              className="action-icon-btn"
-                              title="Edit & Re-analyze"
-                              onClick={() => { setPitch(saved.snippet); setActiveTab('home'); }}
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              className="action-icon-btn"
-                              title="Share Pitch Link"
-                              onClick={() => {
-                                navigator.clipboard?.writeText?.(window.location.href);
-                                alert('Pitch link copied to clipboard!');
-                              }}
-                            >
-                              🔗
-                            </button>
-                            <button
-                              className="action-icon-btn"
-                              title="Delete"
-                              onClick={() => handleDeletePitch(saved.id)}
-                            >
-                              🗑️
-                            </button>
-                          </td>
+                {filteredSavedPitches.length === 0 ? (
+                  <div className="empty-saved-state">
+                    <div className="empty-icon-circle">📂</div>
+                    <h3 className="empty-title">No Saved Pitches Yet</h3>
+                    <p className="empty-desc">
+                      Your saved pitch analyses and drafts will appear here. Score your pitch in the analyzer and click &quot;Save Pitch&quot; to archive and compare your revisions over time.
+                    </p>
+                    <button
+                      className="empty-cta-btn"
+                      onClick={() => setActiveTab('home')}
+                    >
+                      + Start New Pitch Analysis
+                    </button>
+                  </div>
+                ) : (
+                  <div className="table-responsive-card">
+                    <table className="saved-data-table">
+                      <thead>
+                        <tr>
+                          <th>Title</th>
+                          <th>Score</th>
+                          <th>Last Updated</th>
+                          <th>Status</th>
+                          <th>Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {filteredSavedPitches.map((saved) => (
+                          <tr key={saved.id}>
+                            <td className="saved-title-cell">
+                              <strong>{saved.title}</strong>
+                              <p className="saved-snippet">{saved.snippet}</p>
+                            </td>
+                            <td>
+                              <span className={`table-score-pill ${saved.score >= 75 ? 'green' : saved.score >= 60 ? 'amber' : 'gray'}`}>
+                                {saved.score}
+                              </span>
+                            </td>
+                            <td className="date-cell">{saved.lastUpdated}</td>
+                            <td>
+                              <span className={`status-tag ${saved.status.toLowerCase()}`}>
+                                {saved.status}
+                              </span>
+                            </td>
+                            <td className="actions-cell">
+                              <button
+                                className="action-icon-btn"
+                                title="Edit & Re-analyze"
+                                onClick={() => { setPitch(saved.snippet); setActiveTab('home'); }}
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                className="action-icon-btn"
+                                title="Share Pitch Link"
+                                onClick={() => {
+                                  navigator.clipboard?.writeText?.(window.location.href);
+                                  alert('Pitch link copied to clipboard!');
+                                }}
+                              >
+                                🔗
+                              </button>
+                              <button
+                                className="action-icon-btn"
+                                title="Delete"
+                                onClick={() => handleDeletePitch(saved.id)}
+                              >
+                                🗑️
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 
