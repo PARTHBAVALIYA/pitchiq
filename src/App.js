@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { analyzePitch, PRESET_PITCHES } from './analyzer';
 import { VENTURE_DEAL_CORPUS } from './data/sharkTankCorpus';
+import { saveSubscriberEmail } from './supabaseClient';
 import './App.css';
 
 export default function App() {
@@ -37,7 +38,7 @@ export default function App() {
     }
   };
 
-  const handleNewsletterSubmit = (e) => {
+  const handleNewsletterSubmit = async (e) => {
     e.preventDefault();
     const cleanEmail = email.trim();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -46,16 +47,8 @@ export default function App() {
       return;
     }
 
-    try {
-      localStorage.setItem('pitchiq_newsletter_joined', cleanEmail);
-      const existing = JSON.parse(localStorage.getItem('pitchiq_subscribers') || '[]');
-      if (!existing.includes(cleanEmail)) {
-        existing.push(cleanEmail);
-        localStorage.setItem('pitchiq_subscribers', JSON.stringify(existing));
-      }
-    } catch (err) {
-      // ignore local storage errors
-    }
+    // Save to Supabase (and local storage fallback)
+    await saveSubscriberEmail(cleanEmail, pitch);
 
     setHasSubscribed(true);
     setShowNewsletter(false);
