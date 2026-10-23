@@ -241,30 +241,6 @@ export default function App() {
     }
   };
 
-  const handleDemoLogin = async (name, email) => {
-    setAuthError('');
-    setAuthLoading(true);
-    try {
-      let user;
-      try {
-        user = await dbAuthenticateUser(email, 'password123');
-      } catch {
-        user = await dbRegisterUser(name, email, 'password123');
-      }
-      setCurrentUser(user);
-      localStorage.setItem('pitchiq_auth_user', JSON.stringify(user));
-      setShowAuthModal(false);
-      setAuthError('');
-    } catch {
-      const fallbackUser = { id: `usr_${Date.now()}`, name, email };
-      setCurrentUser(fallbackUser);
-      localStorage.setItem('pitchiq_auth_user', JSON.stringify(fallbackUser));
-      setShowAuthModal(false);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('pitchiq_auth_user');
@@ -507,27 +483,6 @@ export default function App() {
               <button type="submit" className="auth-submit-btn" disabled={authLoading}>
                 {authLoading ? 'Processing...' : authMode === 'signup' ? 'Create Account' : 'Sign In'}
               </button>
-
-              <div className="auth-divider">
-                <span>OR 1-CLICK DEMO LOGIN</span>
-              </div>
-
-              <div className="demo-accounts-row">
-                <button
-                  type="button"
-                  className="demo-account-pill"
-                  onClick={() => handleDemoLogin('Parth Bavalliya', 'parth@pitchiq.ai')}
-                >
-                  🚀 Sign in as Parth
-                </button>
-                <button
-                  type="button"
-                  className="demo-account-pill"
-                  onClick={() => handleDemoLogin('Akshat Solanki', 'akshat@pitchiq.ai')}
-                >
-                  👤 Sign in as Akshat
-                </button>
-              </div>
             </form>
           </div>
 
@@ -1777,27 +1732,6 @@ export default function App() {
               <button type="submit" className="auth-submit-btn" disabled={authLoading}>
                 {authLoading ? 'Processing...' : authMode === 'login' ? 'Sign In' : 'Create Account'}
               </button>
-
-              <div className="auth-divider">
-                <span>OR 1-CLICK DEMO LOGIN</span>
-              </div>
-
-              <div className="demo-accounts-row">
-                <button
-                  type="button"
-                  className="demo-account-pill"
-                  onClick={() => handleDemoLogin('Parth Bavalliya', 'parth@pitchiq.ai')}
-                >
-                  🚀 Sign in as Parth
-                </button>
-                <button
-                  type="button"
-                  className="demo-account-pill"
-                  onClick={() => handleDemoLogin('Akshat Solanki', 'akshat@pitchiq.ai')}
-                >
-                  👤 Sign in as Akshat
-                </button>
-              </div>
             </form>
           </div>
         </div>
