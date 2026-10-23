@@ -453,6 +453,15 @@ export default function App() {
             </div>
 
             <nav className="nav-menu">
+              {activeTab !== 'home' && (
+                <button
+                  className="nav-item nav-back-btn"
+                  onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  title="Back to Pitch Input"
+                >
+                  ← Back to Pitch
+                </button>
+              )}
               <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>
                 Home
               </button>
@@ -704,11 +713,12 @@ export default function App() {
 
             <nav className="sidebar-menu">
               <button
-                className={`sidebar-link ${activeTab === 'home' ? 'active' : ''}`}
-                onClick={() => setActiveTab('home')}
+                className="sidebar-link sidebar-back-link"
+                onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                title="Back to Pitch Input"
               >
-                <span className="sidebar-icon">📝</span>
-                New Analysis
+                <span className="sidebar-icon">←</span>
+                Back to Pitch
               </button>
 
               <button
@@ -758,25 +768,37 @@ export default function App() {
 
             {/* Top Workspace Header */}
             <header className="dashboard-header">
-              <div className="header-titles">
-                {activeTab === 'results' && (
-                  <>
-                    <h2 className="page-heading">Pitch Analysis Results</h2>
-                    <p className="page-subheading">AI-powered evaluation based on investor criteria and real venture data.</p>
-                  </>
-                )}
-                {activeTab === 'history' && (
-                  <>
-                    <h2 className="page-heading">Pitch History & Score Comparison</h2>
-                    <p className="page-subheading">Track your progress across iterations and compare exact criteria deltas.</p>
-                  </>
-                )}
-                {activeTab === 'saved' && (
-                  <>
-                    <h2 className="page-heading">Saved Pitches</h2>
-                    <p className="page-subheading">Manage and revisit your previous pitch analyses.</p>
-                  </>
-                )}
+              <div className="header-left-cluster">
+                <button
+                  className="dashboard-back-btn"
+                  onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  title="Back to Pitch Input"
+                  aria-label="Back to Pitch Input"
+                >
+                  <span className="back-arrow">←</span>
+                  <span className="back-text">Back to Pitch</span>
+                </button>
+
+                <div className="header-titles">
+                  {activeTab === 'results' && (
+                    <>
+                      <h2 className="page-heading">Pitch Analysis Results</h2>
+                      <p className="page-subheading">AI-powered evaluation based on investor criteria and real venture data.</p>
+                    </>
+                  )}
+                  {activeTab === 'history' && (
+                    <>
+                      <h2 className="page-heading">Pitch History & Score Comparison</h2>
+                      <p className="page-subheading">Track your progress across iterations and compare exact criteria deltas.</p>
+                    </>
+                  )}
+                  {activeTab === 'saved' && (
+                    <>
+                      <h2 className="page-heading">Saved Pitches</h2>
+                      <p className="page-subheading">Manage and revisit your previous pitch analyses.</p>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="header-actions">
@@ -1032,7 +1054,7 @@ export default function App() {
                     className="edit-pitch-btn"
                     onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   >
-                    &larr; Edit Pitch
+                    ← Back to Pitch Input
                   </button>
 
                   <div className="actions-right-cluster">
@@ -1232,6 +1254,16 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* History Bottom Action */}
+                <div className="results-bottom-actions">
+                  <button
+                    className="edit-pitch-btn"
+                    onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  >
+                    ← Back to Pitch Input
+                  </button>
+                </div>
+
               </div>
             )}
 
@@ -1261,6 +1293,13 @@ export default function App() {
                       Analysed ({savedPitches.filter(p => p.status === 'Analysed').length})
                     </button>
                   </div>
+
+                  <button
+                    className="dashboard-back-btn"
+                    onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  >
+                    ← Back to Pitch
+                  </button>
                 </div>
 
                 {filteredSavedPitches.length === 0 ? (
