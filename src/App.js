@@ -174,8 +174,7 @@ export default function App() {
     if (!authEmail) return;
     const user = {
       name: authName.trim() || authEmail.split('@')[0],
-      email: authEmail.trim(),
-      role: 'Founder / Project Lead'
+      email: authEmail.trim()
     };
     setCurrentUser(user);
     localStorage.setItem('pitchiq_auth_user', JSON.stringify(user));
@@ -188,8 +187,7 @@ export default function App() {
   const handleDemoLogin = (name, email) => {
     const user = {
       name,
-      email,
-      role: 'Founder / Project Lead'
+      email
     };
     setCurrentUser(user);
     localStorage.setItem('pitchiq_auth_user', JSON.stringify(user));
@@ -369,7 +367,7 @@ export default function App() {
             </h3>
             <p className="auth-sub">
               {authMode === 'signup'
-                ? 'Join founders getting AI-powered pitch script & slide deck evaluations backed by 200+ venture deals.'
+                ? 'Get instant, AI-powered pitch script & slide deck evaluations backed by 200+ venture deals.'
                 : 'Sign in to access your saved pitches, revision progression, and venture benchmarks.'}
             </p>
 
@@ -413,7 +411,7 @@ export default function App() {
               </div>
 
               <button type="submit" className="auth-submit-btn">
-                {authMode === 'signup' ? 'Create Account &rarr;' : 'Sign In &rarr;'}
+                {authMode === 'signup' ? 'Create Account' : 'Sign In'}
               </button>
 
               <div className="auth-divider">
@@ -426,14 +424,14 @@ export default function App() {
                   className="demo-account-pill"
                   onClick={() => handleDemoLogin('Parth Bavalliya', 'parth@pitchiq.ai')}
                 >
-                  🚀 Sign in as Parth (Lead)
+                  🚀 Sign in as Parth
                 </button>
                 <button
                   type="button"
                   className="demo-account-pill"
                   onClick={() => handleDemoLogin('Akshat Solanki', 'akshat@pitchiq.ai')}
                 >
-                  👤 Sign in as Akshat (Co-Founder)
+                  👤 Sign in as Akshat
                 </button>
               </div>
 
@@ -441,9 +439,9 @@ export default function App() {
                 <button
                   type="button"
                   className="guest-explore-btn"
-                  onClick={() => handleDemoLogin('Guest Founder', 'guest@pitchiq.ai')}
+                  onClick={() => handleDemoLogin('Guest', 'guest@pitchiq.ai')}
                 >
-                  Or explore as Guest &rarr;
+                  Or explore as Guest
                 </button>
               </div>
             </form>
@@ -504,7 +502,6 @@ export default function App() {
                     <div className="dropdown-user-info">
                       <strong>{currentUser.name}</strong>
                       <span className="dropdown-email">{currentUser.email}</span>
-                      <span className="dropdown-meta">{currentUser.role || 'Founder / Project Lead'}</span>
                     </div>
                     <div className="dropdown-divider" />
                     <button className="dropdown-item" onClick={() => { setActiveTab('history'); setUserDropdownOpen(false); }}>
@@ -702,7 +699,7 @@ export default function App() {
                   {loading ? (
                     <><span className="spinner-circle" /> Analyzing Pitch...</>
                   ) : (
-                    <>✨ Analyze {inputMode === 'pdf' ? 'Pitch Deck' : 'Pitch'} &rarr;</>
+                    <>✨ Analyze {inputMode === 'pdf' ? 'Pitch Deck' : 'Pitch'} →</>
                   )}
                 </button>
               </div>
@@ -893,7 +890,7 @@ export default function App() {
                         )}
                       </span>
                       <button className="view-history-link" onClick={() => setActiveTab('history')}>
-                        View Full Score Progression &rarr;
+                        View Full Score Progression →
                       </button>
                     </div>
                   )}
@@ -1164,7 +1161,7 @@ export default function App() {
                       <span className="delta-num">
                         {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta}
                       </span>
-                      <span className="delta-label">Overall Points Progress ({revA?.score || 0} &rarr; {revB?.score || 0})</span>
+                      <span className="delta-label">Overall Points Progress ({revA?.score || 0} → {revB?.score || 0})</span>
                     </div>
                     <p className="delta-narrative">
                       {scoreDelta > 0
@@ -1257,7 +1254,7 @@ export default function App() {
                                 className="secondary-action-btn"
                                 onClick={() => handleRestoreRevision(rev)}
                               >
-                                Restore in Editor &rarr;
+                                Restore in Editor →
                               </button>
                             </td>
                           </tr>
@@ -1642,7 +1639,7 @@ export default function App() {
             </div>
 
             <h3 className="auth-title">
-              {authMode === 'login' ? 'Welcome Back to PitchIQ' : 'Create Your Founder Account'}
+              {authMode === 'login' ? 'Welcome Back to PitchIQ' : 'Create Your PitchIQ Account'}
             </h3>
             <p className="auth-sub">
               Access your saved pitches, revision history, and case-grounded venture analytics.
@@ -1688,7 +1685,7 @@ export default function App() {
               </div>
 
               <button type="submit" className="auth-submit-btn">
-                {authMode === 'login' ? 'Sign In &rarr;' : 'Create Account &rarr;'}
+                {authMode === 'login' ? 'Sign In' : 'Create Account'}
               </button>
 
               <div className="auth-divider">
@@ -1699,16 +1696,16 @@ export default function App() {
                 <button
                   type="button"
                   className="demo-account-pill"
-                  onClick={() => handleDemoLogin('Akshat Solanki', 'akshat@pitchiq.ai')}
+                  onClick={() => handleDemoLogin('Parth Bavalliya', 'parth@pitchiq.ai')}
                 >
-                  Sign in as Akshat (Lead)
+                  🚀 Sign in as Parth
                 </button>
                 <button
                   type="button"
                   className="demo-account-pill"
-                  onClick={() => handleDemoLogin('Parth Bavalliya', 'parth@pitchiq.ai')}
+                  onClick={() => handleDemoLogin('Akshat Solanki', 'akshat@pitchiq.ai')}
                 >
-                  Sign in as Parth (Lead)
+                  👤 Sign in as Akshat
                 </button>
               </div>
             </form>
@@ -1776,7 +1773,7 @@ export default function App() {
 
             <div className="how-modal-footer">
               <button className="primary-gradient-btn" onClick={() => setShowHowItWorks(false)}>
-                Got It &mdash; Let's Analyze! &rarr;
+                Got It — Let's Analyze!
               </button>
             </div>
           </div>
