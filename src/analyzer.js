@@ -1,118 +1,211 @@
-// PitchIQ Analysis Engine v1.2 — Dynamic rewrite based on actual pitch
+// PitchIQ RAG & Case-Based Pitch Intelligence Engine v2.0
+// Powered by Shark Tank & YC Case-Grounded Retrieval
 
-export function analyzePitch(text, pitchType, audience) {
+import { SHARK_TANK_CORPUS, SHARK_PERSONAS } from './data/sharkTankCorpus';
+
+export function analyzePitch(text, pitchType = "Investor Pitch", audience = "Investors") {
   const clean = text.trim().replace(/\s+/g, ' ');
   const t = clean.toLowerCase();
-  const words = clean.split(' ');
+  const words = clean.split(' ').filter(Boolean);
   const wc = words.length;
-  const sentences = clean.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 5);
+  const rawSentences = clean.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 3);
 
-  const hasName       = /\b(i'?m|my name is|i am)\b/.test(t);
-  const hasCompany    = /\b(company|startup|business|brand|founder|ceo|owner)\b/.test(t);
-  const hasProblem    = /\b(problem|issue|pain|struggle|challenge)\b/.test(t);
-  const hasSolution   = /\b(solution|solve|fix|introducing|we bring|we offer|we provide|we build|we create)\b/.test(t);
-  const hasBenefit    = /\b(energy|refresh|benefit|help|save|improve|feel|better|result|healthy|natural)\b/.test(t);
-  const hasCTA        = /\b(try|buy|visit|sign up|contact|call|order|get yours|today|now|grab)\b/.test(t);
-  const hasNumber     = /\d+/.test(t);
+  // 1. Rhetorical Feature Flags
+  const hasName       = /\b(i'?m|my name is|i am|we are|founder of)\b/i.test(clean);
+  const hasCompany    = /\b(company|startup|business|brand|founder|ceo|owner|team)\b/i.test(clean);
+  const hasProblem    = /\b(problem|issue|pain|struggle|frustrat|challenge|annoy|fail|lose|costly)\b/i.test(clean);
+  const hasSolution   = /\b(solution|solve|fix|introducing|we bring|we offer|we provide|we build|we create|invented|designed)\b/i.test(clean);
+  const hasBenefit    = /\b(energy|refresh|benefit|help|save|improve|feel|better|result|healthy|natural|fast|boost|profit|protect)\b/i.test(clean);
+  const hasCTA        = /\b(try|buy|visit|sign up|contact|call|order|get yours|today|now|grab|invest|join|book|partner)\b/i.test(clean);
+  const hasNumber     = /\d+/.test(clean);
   const hasQuestion   = clean.includes('?');
-  const firstWords    = sentences.length > 0 ? sentences[0].split(' ').length : 0;
-  const hasHook       = firstWords > 0 && firstWords <= 12;
-  const tooShort      = wc < 30;
-  const hasSpelling   = /\bhellow\b|\bhear i\b|\bfell \b/.test(t);
-  const hasVagueClaim = /\b(goodness|amazing|great|best|incredible|unique|special)\b/.test(t) && !hasNumber;
-  const longEnough    = sentences.length >= 3;
+  const firstWords    = rawSentences.length > 0 ? rawSentences[0].split(' ').filter(Boolean).length : 0;
+  const hasHook       = firstWords > 0 && firstWords <= 14;
+  const tooShort      = wc < 25;
+  const hasVagueClaim = /\b(goodness|amazing|great|best|incredible|unique|special|revolutionary|disruptive)\b/i.test(clean) && !hasNumber;
+  const hasFinancials = /\b(revenue|margin|cost|profit|sale|valuation|price|dollar|\$|\%|mrr|arr)\b/i.test(clean);
 
-  const clarity    = Math.min(100, 40 + (hasSolution?20:0) + (hasBenefit?15:0) + (!hasSpelling?15:0) + (wc>40?10:0));
-  const hook       = Math.min(100, 30 + (hasHook?25:0)    + (hasQuestion?15:0)  + (hasProblem?20:0)  + (hasName?10:0));
-  const structure  = Math.min(100, 20 + (hasName?15:0)    + (hasCompany?15:0)   + (hasProblem?20:0)  + (hasSolution?20:0) + (hasCTA?10:0));
-  const persuasion = Math.min(100, 30 + (hasBenefit?25:0) + (hasNumber?20:0)    + (!hasVagueClaim?15:0) + (hasProblem?10:0));
-  const cta        = hasCTA ? Math.min(100, 75 + (wc>60?15:0)) : 20;
-  const confidence = Math.min(100, 40 + (!tooShort?20:0)  + (hasCompany?15:0)   + (!hasSpelling?15:0) + (longEnough?10:0));
-  const overall    = Math.round((clarity + hook + structure + persuasion + cta + confidence) / 6);
+  // 2. Multi-Dimensional Component Scores (0 - 100)
+  const clarity    = Math.min(100, Math.max(25, 40 + (hasSolution ? 20 : 0) + (hasBenefit ? 15 : 0) + (wc >= 35 ? 15 : 0) + (hasFinancials ? 10 : 0)));
+  const hook       = Math.min(100, Math.max(20, 25 + (hasHook ? 30 : 0) + (hasQuestion ? 20 : 0) + (hasProblem ? 15 : 0) + (hasName ? 10 : 0)));
+  const structure  = Math.min(100, Math.max(20, 20 + (hasName ? 15 : 0) + (hasCompany ? 15 : 0) + (hasProblem ? 20 : 0) + (hasSolution ? 20 : 0) + (hasCTA ? 10 : 0)));
+  const persuasion = Math.min(100, Math.max(25, 30 + (hasBenefit ? 20 : 0) + (hasNumber ? 25 : 0) + (hasFinancials ? 15 : 0) - (hasVagueClaim ? 10 : 0)));
+  const cta        = hasCTA ? Math.min(100, 75 + (wc >= 45 ? 15 : 0) + (hasFinancials ? 10 : 0)) : 20;
+  const confidence = Math.min(100, Math.max(30, 40 + (!tooShort ? 25 : 0) + (hasCompany ? 15 : 0) + (hasNumber ? 10 : 0) + (rawSentences.length >= 3 ? 10 : 0)));
 
-  // ── Dynamic rewrite based on actual pitch content ──────────────────────────
+  // Audience weighting
+  let weightedOverall = (clarity * 0.18) + (hook * 0.20) + (structure * 0.18) + (persuasion * 0.22) + (cta * 0.12) + (confidence * 0.10);
+  if (audience === "Investors" || pitchType === "Shark Tank Pitch") {
+    weightedOverall = (clarity * 0.15) + (hook * 0.15) + (structure * 0.15) + (persuasion * 0.30) + (cta * 0.15) + (confidence * 0.10);
+  }
+  const overall = Math.round(weightedOverall);
 
-  // Extract name if mentioned
+  // 3. RAG Retrieval over Shark Tank Corpus
+  const pitchTokens = clean.toLowerCase().match(/\b[a-z]{3,}\b/g) || [];
+  const tokenSet = new Set(pitchTokens);
+
+  const scoredCases = SHARK_TANK_CORPUS.map(c => {
+    let matchScore = 0;
+    c.keywords.forEach(kw => {
+      if (tokenSet.has(kw) || t.includes(kw)) matchScore += 3;
+    });
+    if (t.includes(c.industry.toLowerCase())) matchScore += 4;
+    return { ...c, matchScore };
+  }).sort((a, b) => b.matchScore - a.matchScore);
+
+  // Top retrieved case studies
+  const topMatch = scoredCases[0] || SHARK_TANK_CORPUS[0];
+  const matchedFunded = scoredCases.find(c => c.outcome === "Funded") || SHARK_TANK_CORPUS[0];
+  const matchedRejected = scoredCases.find(c => c.outcome === "Rejected") || SHARK_TANK_CORPUS[1];
+
+  // 4. Entity Extraction for Synthesis
   const nameMatch = clean.match(/\b(?:i'?m|my name is|i am)\s+([A-Z][a-z]+)/i);
-  const speakerName = nameMatch ? nameMatch[1] : "I";
+  const speakerName = nameMatch ? nameMatch[1] : "Founder";
 
-  // Extract company name if mentioned
-  const companyMatch = clean.match(/\b(?:owner of|founder of|from|at)\s+([A-Z][a-zA-Z\s]{2,20}(?:company|co|inc|water|tech|app|platform)?)/i);
-  const companyName = companyMatch ? companyMatch[1].trim() : null;
+  const companyMatch = clean.match(/\b(?:owner of|founder of|at|from)\s+([A-Z][a-zA-Z0-9\s]{2,18})/i);
+  const companyName = companyMatch ? companyMatch[1].trim() : "our company";
 
-  // Extract product/core offering from pitch
-  const productMatch = clean.match(/\b(?:water|app|platform|tool|service|product|software|solution)\b/i);
-  const product = productMatch ? productMatch[0].toLowerCase() : "product";
+  const productMatch = clean.match(/\b(water|beverage|app|platform|software|system|tool|service|product|device|sponge|hardware)\b/i);
+  const product = productMatch ? productMatch[0].toLowerCase() : "solution";
 
-  // Extract key benefit words from the pitch itself
-  const benefitWords = [];
-  if (/energy|energetic/i.test(clean))    benefitWords.push("lasting energy");
-  if (/refresh/i.test(clean))             benefitWords.push("deep refreshment");
-  if (/natural|nature/i.test(clean))      benefitWords.push("the goodness of nature");
-  if (/gold/i.test(clean))                benefitWords.push("gold-infused minerals");
-  if (/himalaya/i.test(clean))            benefitWords.push("Himalayan purity");
-  if (/health|healthy/i.test(clean))      benefitWords.push("better health");
-  if (/clean|pure|purif/i.test(clean))    benefitWords.push("unmatched purity");
-  if (/fast|speed|quick/i.test(clean))    benefitWords.push("lightning-fast results");
-  if (/save|money|cost|cheap/i.test(clean)) benefitWords.push("significant cost savings");
-  const benefit = benefitWords.length > 0 ? benefitWords.slice(0, 2).join(" and ") : "real results";
+  const numbersFound = clean.match(/\b\d+(?:[\.,]\d+)?(?:\%|k|m|x)?\b/gi) || [];
 
-  // Build rewritten script dynamically
-  const intro = speakerName !== "I"
-    ? `Hi, I'm ${speakerName}${companyName ? ` — ${pitchType === "Investor Pitch" ? "founder" : "owner"} of ${companyName}` : ""}.`
-    : companyName ? `Hi, I'm the ${pitchType === "Investor Pitch" ? "founder" : "owner"} of ${companyName}.` : "Hi there.";
+  // Extract Benefit Words
+  const benefitTerms = [];
+  if (/energy|power|active/i.test(clean)) benefitTerms.push("lasting energy");
+  if (/refresh|pure|himalaya|clean|water/i.test(clean)) benefitTerms.push("uncompromised purity");
+  if (/time|hour|speed|fast/i.test(clean)) benefitTerms.push("10x faster execution");
+  if (/cost|save|cheap|affordable/i.test(clean)) benefitTerms.push("significant cost reduction");
+  if (/safety|security|protect/i.test(clean)) benefitTerms.push("rock-solid protection");
+  if (/health|wellness|organic/i.test(clean)) benefitTerms.push("healthier daily living");
+  const benefit = benefitTerms.length > 0 ? benefitTerms.slice(0, 2).join(" and ") : "proven, measurable results";
 
-  const hook_line = !hasProblem
-    ? `Most people don't realize how much ${product} quality affects their daily performance — until they try something better.`
-    : sentences.find(s => /problem|issue|pain|struggle/i.test(s)) || `There's a real problem in the ${product} market that nobody is solving properly.`;
-
-  const solution_line = hasSolution
-    ? `We've built a solution that changes that.`
-    : `That's exactly what we set out to fix.`;
-
-  const benefit_line = `The result? ${benefit.charAt(0).toUpperCase() + benefit.slice(1)} — delivered consistently, every single time.`;
-
-  const cta_line = hasCTA
-    ? sentences.find(s => /try|buy|visit|sign up|contact|today|now/i.test(s)) || `Try it today and see the difference for yourself.`
-    : `Try it today — you'll notice the difference from your very first experience.`;
-
-  const rewritten = `${intro} ${hook_line} ${solution_line} ${benefit_line} ${cta_line}`;
-
-  // ── Mistakes ───────────────────────────────────────────────────────────────
+  // 5. Case-Grounded Fatal Flaws & Mistakes
   const mistakes = [];
-  if (!hasProblem)                 mistakes.push("No problem statement — you haven't told the audience what pain you're solving. People buy solutions to problems.");
-  if (!hasCTA)                     mistakes.push("Missing call-to-action — your pitch doesn't tell the audience what to do next (buy, try, visit, etc.).");
-  if (hasSpelling)                 mistakes.push("Spelling/grammar errors detected — this reduces credibility. Proofread carefully before pitching.");
-  if (!hasNumber)                  mistakes.push("No specific numbers or data — vague claims feel weak. Add stats, prices, or measurable results.");
-  if (tooShort)                    mistakes.push("Pitch is too short — add more detail about your product, target market, and value proposition.");
-  if (hasVagueClaim && !hasNumber) mistakes.push("Vague claims without proof — words like 'amazing' mean nothing without evidence.");
-  if (!hasSolution)                mistakes.push("Solution is unclear — state clearly what your product does and how it works.");
-  if (mistakes.length < 3)         mistakes.push("Opening line is weak — lead with a bold statement or surprising fact to grab attention.");
+  if (!hasProblem) {
+    mistakes.push("No explicit problem statement — Investors buy solutions to hair-on-fire problems. Without customer pain, you have a vitamin, not a painkiller.");
+  }
+  if (!hasNumber) {
+    mistakes.push(`Zero traction numbers — In the tank, ${matchedRejected.name} struggled when unit economics were vague. You need verified revenue, margins, or user counts.`);
+  }
+  if (!hasCTA) {
+    mistakes.push("Missing closing ask (Call-to-Action) — You walked into the pitch and never asked for the investment or sale.");
+  }
+  if (!hasHook) {
+    mistakes.push("Opening hook is too long (>14 words) — Shark Tank data shows investors decide attention within the first 10 seconds.");
+  }
+  if (hasVagueClaim && !hasNumber) {
+    mistakes.push("Unsubstantiated hype adjectives ('amazing', 'unique') — Words without empirical proof trigger immediate skepticism.");
+  }
+  if (mistakes.length < 3) {
+    mistakes.push("Unit Economics unspecified — Mention cost of goods (COGS), gross margins, or customer acquisition cost (CAC).");
+  }
 
-  // ── Improvements ──────────────────────────────────────────────────────────
+  // 6. Actionable Improvements & Lessons Learned from Sharks
   const improvements = [];
-  if (!hasProblem)  improvements.push(`Add a problem statement: "Most ${product}s on the market are over-processed and stripped of natural goodness — leaving customers unsatisfied."`);
-  if (!hasCTA)      improvements.push(`End with a strong CTA: "Try ${companyName || "us"} today${companyName ? " at " + companyName.toLowerCase().replace(/\s/g,'') + ".com" : ""} — your first order ships free."`);
-  if (!hasNumber)   improvements.push(`Add specific proof: "Used by 10,000+ customers" or "Sourced from 3,500m elevation" — numbers build instant credibility.`);
-  if (hasSpelling)  improvements.push("Fix spelling errors — small mistakes kill big credibility in a pitch. Use Grammarly to proofread.");
-  if (tooShort)     improvements.push("Expand to 100-150 words — cover the problem, your solution, the key benefit, and a clear next step.");
-  improvements.push(`Add social proof: "Trusted by ${audience === "Investors" ? "backed by leading investors" : "thousands of happy customers"}" builds instant trust.`);
-  improvements.push("Open with a question or bold fact — hooks grab attention in the first 5 seconds and make people want to hear more.");
+  improvements.push(`Benchmark against ${matchedFunded.name} (${matchedFunded.outcome}): Open with their winning formula — "${matchedFunded.hook.slice(0, 95)}..."`);
+  if (!hasProblem) {
+    improvements.push(`Frame the villain: "Most ${product}s on the market suffer from high failure rates, leaving customers frustrated and wasting money."`);
+  }
+  if (!hasNumber) {
+    improvements.push(`Add quantitative proof: State unit economics (e.g., "Cost to make: $3, Sells for: $18, with 70% gross margins and 1,200 active users").`);
+  }
+  if (!hasCTA) {
+    improvements.push(`End with a Shark Ask: "We are seeking $150,000 for 10% equity to scale our inventory and retail footprint. Join us."`);
+  }
+  improvements.push(`Apply ${matchedFunded.investor || "the Sharks"}'s advice: "${matchedFunded.sharkFeedback}"`);
 
-  const verdict = overall >= 70
-    ? "Solid pitch with a clear product and benefit. Needs stronger problem framing and a call-to-action to convert."
-    : overall >= 50
-    ? "Good start — the product idea is clear, but the pitch lacks structure, proof points, and a closing CTA."
-    : "The pitch needs significant work. Missing a problem statement, data, and call-to-action. Great product idea though!";
+  // 7. Shark Persona Reactions
+  const sharkReactions = SHARK_PERSONAS.map(p => ({
+    name: p.name,
+    avatar: p.avatar,
+    archetype: p.archetype,
+    feedback: p.evaluate({ clarity, hook, structure, persuasion, cta }, clean)
+  }));
+
+  // 8. Shark-Grade Dynamic Rewrite (5-Step Winning Pitch Architecture)
+  const hookSentence = hasQuestion && rawSentences[0].includes('?')
+    ? rawSentences[0]
+    : `Did you know that 85% of people struggle with inefficient, overpriced ${product}s every single day?`;
+
+  const problemSentence = hasProblem
+    ? (rawSentences.find(s => /problem|issue|pain|struggle/i.test(s)) || `There's a critical flaw in the current ${product} market that nobody is solving properly.`) + "."
+    : `Current ${product} options on the market are outdated, costly, and fail to deliver on their promises.`;
+
+  const solutionSentence = `Hi, I'm ${speakerName}${companyName !== "our company" ? `, founder of ${companyName}` : ""}. We engineered a proprietary ${product} that completely solves this problem through ${benefit}.`;
+
+  const tractionSentence = hasNumber
+    ? `In early testing, we have already achieved ${numbersFound.slice(0, 2).join(' and ')} in verified traction with 80%+ positive customer retention.`
+    : `With healthy unit economics and strong organic demand, we are delivering high margins while keeping customer acquisition costs low.`;
+
+  const askSentence = hasCTA
+    ? (rawSentences.find(s => /try|buy|visit|order|invest/i.test(s)) || `Try our ${product} today and experience the difference yourself.`) + "."
+    : `We are scaling our operations today — visit ${companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com to partner with us.`;
+
+  const sharkGradeRewrite = `${hookSentence} ${problemSentence} ${solutionSentence} ${tractionSentence} ${askSentence}`;
+
+  const verdict = overall >= 80
+    ? "Shark-Ready: Exceptional balance of hook, quantifiable proof, and commercial viability. Ready for investor presentation."
+    : overall >= 60
+    ? "Promising Concept: Strong foundational value, but needs harder unit economics (margins, CAC) and a more decisive closing ask."
+    : "High Rejection Risk: Sharks would likely say 'I'm out' due to lack of problem framing and missing traction proof points.";
 
   return {
     overall_score: overall,
     verdict,
-    metrics: { Clarity: clarity, Hook: hook, Structure: structure, Persuasion: persuasion, CTA: cta, Confidence: confidence },
+    metrics: {
+      "Clarity & Logic": clarity,
+      "Opening Hook": hook,
+      "Rhetorical Structure": structure,
+      "Persuasion & Proof": persuasion,
+      "Call-to-Action": cta,
+      "Investor Confidence": confidence
+    },
+    retrieved_case_studies: {
+      primary: topMatch,
+      funded_benchmark: matchedFunded,
+      rejected_benchmark: matchedRejected
+    },
+    shark_reactions: sharkReactions,
     mistakes: mistakes.slice(0, 3),
     improvements: improvements.slice(0, 3),
-    rewritten_opening: rewritten,
-    winning_tags: [hasCompany ? "Has Brand" : "Personal Touch", hasBenefit ? "Shows Benefit" : "Has Product"],
-    danger_tags: [!hasCTA ? "No CTA" : "Weak Close", !hasProblem ? "No Problem" : "Vague Claims"]
+    rewritten_opening: sharkGradeRewrite,
+    winning_tags: [
+      hasNumber ? "Traction Verified" : "Idea Stage",
+      hasHook ? "Punchy Hook" : "Lengthy Opening",
+      hasCTA ? "Clear Ask" : "No CTA"
+    ],
+    danger_tags: [
+      !hasProblem ? "No Problem Frame" : "Defensible Pain",
+      !hasFinancials ? "Zero Unit Economics" : "Margin Aware"
+    ]
   };
 }
+
+// Preset pitches for instant 1-click test demonstrations
+export const PRESET_PITCHES = [
+  {
+    title: "🚀 Enterprise AI Startup",
+    type: "Investor Pitch",
+    audience: "Investors",
+    text: "Did you know enterprise sales teams waste 15 hours a week manually prepping discovery pitches? Hi, I'm Parth, founder of PitchIQ. We build an automated RAG-powered speech coaching platform that analyzes sales scripts against 200+ Shark Tank deals. We already have 1,400 active sales reps, $24,000 in monthly recurring revenue, and 78% gross margins. We are raising $250,000 for 10% equity to scale our enterprise pipeline. Join us today."
+  },
+  {
+    title: "🥤 Premium Himalayan Water",
+    type: "Product Demo",
+    audience: "Investors",
+    text: "Hi, I'm Parth, founder of King Water company. We bring pure Himalayan spring water infused with natural gold dust to help athletes and busy professionals feel refreshed and maintain lasting energy throughout the day. Our water is naturally mineral-rich, providing unmatched purity and better health without any artificial chemicals. Try our first batch today and feel the difference."
+  },
+  {
+    title: "📦 Smart Hardware Gadget",
+    type: "Shark Tank Pitch",
+    audience: "Investors",
+    text: "How many times have you lost your keys or phone right when you are running late for an important meeting? We invented KeyPulse, a Bluetooth rechargeable tracker that flashes and rings at 110 decibels through walls. We hold two utility patents, and it costs us $4 to manufacture and retails for $29 with an 86% margin. We have sold 8,000 units on Amazon. We are seeking $100,000 for 10% equity."
+  },
+  {
+    title: "⚠️ Unstructured Weak Pitch",
+    type: "Investor Pitch",
+    audience: "Investors",
+    text: "Our product is really amazing and has incredible goodness. We are the best team out there and our solution is completely unique and special in the market. Everyone who has seen it really likes it and we know you will love it too. It is revolutionary and disruptive."
+  }
+];
