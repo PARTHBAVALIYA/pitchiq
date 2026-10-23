@@ -2487,6 +2487,49 @@ button {
   transform: translateY(-1px);
 }
 
+/* Single Revision Info Card in Score Comparison */
+.single-revision-info-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 28px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-lg, 12px);
+  margin-bottom: 20px;
+}
+
+.single-rev-icon {
+  font-size: 32px;
+  width: 56px;
+  height: 56px;
+  background: #dcfce7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.single-rev-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.single-rev-content h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #166534;
+}
+
+.single-rev-content p {
+  font-size: 13px;
+  color: #15803d;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
 @media (max-width: 960px) {
   .dashboard-back-btn .back-text { display: none; }
   .dashboard-back-btn { padding: 6px 10px; }

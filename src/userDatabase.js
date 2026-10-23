@@ -406,3 +406,32 @@ export async function dbSaveHistoryAttempt(userEmail, attempt) {
 
   return attemptRecord;
 }
+
+export async function dbClearHistory(userEmail) {
+  const cleanEmail = (userEmail || '').trim().toLowerCase();
+  try {
+    localStorage.removeItem(`pitchiq_history_${cleanEmail}`);
+    localStorage.removeItem('pitchiq_history');
+  } catch (e) {}
+
+  try {
+    const db = await openDatabase();
+    if (!db) return true;
+
+    return new Promise((resolve) => {
+      const tx = db.transaction(['pitch_history'], 'readwrite');
+      const store = tx.objectStore('pitch_history');
+      const index = store.index('userEmail');
+      const req = index.getAllKeys(cleanEmail);
+
+      req.onsuccess = () => {
+        const keys = req.result || [];
+        keys.forEach(k => store.delete(k));
+        resolve(true);
+      };
+      req.onerror = () => resolve(false);
+    });
+  } catch {
+    return false;
+  }
+}

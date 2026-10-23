@@ -9,67 +9,10 @@ import {
   dbSavePitch,
   dbDeletePitch,
   dbGetHistory,
-  dbSaveHistoryAttempt
+  dbSaveHistoryAttempt,
+  dbClearHistory
 } from './userDatabase';
 import './App.css';
-
-// Initial seed history for immediate demonstration
-const INITIAL_HISTORY = [
-  {
-    id: 'rev-1',
-    attemptNumber: 1,
-    timestamp: '10:14 AM',
-    date: 'Yesterday',
-    pitchTitle: 'Early Concept Draft',
-    pitchText: 'Our product is really amazing and has incredible goodness. We are the best team out there and our solution is completely unique and special in the market. Everyone who has seen it really likes it and we know you will love it too.',
-    score: 48,
-    verdict: 'High Rejection Risk: Institutional investors would pass due to lack of problem framing and missing traction.',
-    metrics: {
-      'Clarity & Logic': 40,
-      'Opening Hook': 25,
-      'Rhetorical Structure': 35,
-      'Persuasion & Proof': 30,
-      'Call-to-Action': 20,
-      'Investor Confidence': 35
-    }
-  },
-  {
-    id: 'rev-2',
-    attemptNumber: 2,
-    timestamp: '02:30 PM',
-    date: 'Yesterday',
-    pitchTitle: 'Revised with Problem Framing',
-    pitchText: 'Hi, I\'m Parth, founder of King Water company. We bring pure Himalayan spring water infused with natural gold dust to help athletes and busy professionals feel refreshed and maintain lasting energy throughout the day. Our water is naturally mineral-rich, providing unmatched purity and better health without any artificial chemicals. Try our first batch today and feel the difference.',
-    score: 68,
-    verdict: 'Promising Concept: Strong foundational value, but needs harder unit economics and a more decisive closing ask.',
-    metrics: {
-      'Clarity & Logic': 70,
-      'Opening Hook': 55,
-      'Rhetorical Structure': 70,
-      'Persuasion & Proof': 50,
-      'Call-to-Action': 65,
-      'Investor Confidence': 65
-    }
-  },
-  {
-    id: 'rev-3',
-    attemptNumber: 3,
-    timestamp: '06:45 PM',
-    date: 'Today',
-    pitchTitle: 'Investment-Ready B2B SaaS',
-    pitchText: 'Did you know enterprise sales teams waste 15 hours a week manually prepping discovery pitches? Hi, I\'m Parth, founder of PitchIQ. We build an automated speech coaching platform that analyzes sales scripts against 200+ funded venture deals. We already have 1,400 active sales reps, $24,000 in monthly recurring revenue, and 78% gross margins. We are raising $250,000 for 10% equity to scale our enterprise pipeline. Join us today.',
-    score: 84,
-    verdict: 'Investment-Ready: Exceptional balance of hook, quantifiable proof, and commercial viability.',
-    metrics: {
-      'Clarity & Logic': 85,
-      'Opening Hook': 85,
-      'Rhetorical Structure': 85,
-      'Persuasion & Proof': 85,
-      'Call-to-Action': 90,
-      'Investor Confidence': 90
-    }
-  }
-];
 
 export default function App() {
   // Navigation & User State
@@ -108,19 +51,12 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
-  // History State
-  const [pitchHistory, setPitchHistory] = useState(() => {
-    try {
-      const stored = localStorage.getItem('pitchiq_history');
-      return stored ? JSON.parse(stored) : INITIAL_HISTORY;
-    } catch {
-      return INITIAL_HISTORY;
-    }
-  });
+  // History State (starts completely empty for every user)
+  const [pitchHistory, setPitchHistory] = useState([]);
 
   // History Comparison Selectors (index of Revision A and B)
   const [compareRevA, setCompareRevA] = useState(0);
-  const [compareRevB, setCompareRevB] = useState(pitchHistory.length - 1);
+  const [compareRevB, setCompareRevB] = useState(0);
 
   // Saved Pitches State (starts completely empty for every new user)
   const [savedPitches, setSavedPitches] = useState([]);
@@ -129,23 +65,31 @@ export default function App() {
 
   const fileInputRef = useRef(null);
 
-  // 1. Initialize IndexedDB working database on mount
+  // 1. Initialize IndexedDB working database on mount & purge any old mock history
   useEffect(() => {
     openDatabase().catch(console.warn);
+    try {
+      localStorage.removeItem('pitchiq_history');
+    } catch (e) {}
   }, []);
 
   // 2. Sync user-specific history and saved pitches from working database
   useEffect(() => {
     if (!currentUser?.email) {
       setSavedPitches([]);
+      setPitchHistory([]);
       return;
     }
 
     dbGetHistory(currentUser.email).then(history => {
-      if (history && history.length > 0) {
-        setPitchHistory(history);
-        setCompareRevA(Math.max(0, history.length - 2));
-        setCompareRevB(history.length - 1);
+      const list = history || [];
+      setPitchHistory(list);
+      if (list.length > 0) {
+        setCompareRevA(Math.max(0, list.length - 2));
+        setCompareRevB(list.length - 1);
+      } else {
+        setCompareRevA(0);
+        setCompareRevB(0);
       }
     }).catch(console.warn);
 
@@ -153,15 +97,6 @@ export default function App() {
       setSavedPitches(saved || []);
     }).catch(console.warn);
   }, [currentUser?.email]);
-
-  // Save history to localStorage fast cache
-  useEffect(() => {
-    try {
-      localStorage.setItem('pitchiq_history', JSON.stringify(pitchHistory));
-    } catch (e) {
-      console.warn('LocalStorage error:', e);
-    }
-  }, [pitchHistory]);
 
   // Lock background scroll when any modal is open
   useEffect(() => {
@@ -217,6 +152,7 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setSavedPitches([]);
+    setPitchHistory([]);
     localStorage.removeItem('pitchiq_auth_user');
     setUserDropdownOpen(false);
   };
@@ -325,6 +261,22 @@ export default function App() {
     setSavedPitches(savedPitches.filter(p => p.id !== pitchId));
     if (currentUser?.email) {
       await dbDeletePitch(currentUser.email, pitchId);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (window.confirm('Clear all score comparison attempts? This will remove previous revisions and reset your score history.')) {
+      setPitchHistory([]);
+      setCompareRevA(0);
+      setCompareRevB(0);
+      try {
+        localStorage.removeItem('pitchiq_history');
+        if (currentUser?.email) {
+          await dbClearHistory(currentUser.email);
+        }
+      } catch (e) {
+        console.warn(e);
+      }
     }
   };
 
@@ -586,6 +538,12 @@ export default function App() {
               {activeTab === 'saved' && (
                 <button className="primary-gradient-btn" onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                   + New Analysis
+                </button>
+              )}
+
+              {activeTab === 'history' && pitchHistory.length > 0 && (
+                <button className="secondary-action-btn" onClick={handleClearHistory} title="Clear all recorded pitch score attempts">
+                  🗑️ Clear Score Data
                 </button>
               )}
 
@@ -1060,177 +1018,207 @@ export default function App() {
             {activeTab === 'history' && (
               <div className="history-view-panel">
 
-                {/* Score Progression Stepper Banner */}
-                <div className="card-panel progression-stepper-card">
-                  <div className="panel-header">
-                    <span className="panel-icon">📈</span>
-                    <h3 className="panel-title">Score Progression Across Revisions</h3>
-                  </div>
-
-                  <div className="stepper-horizontal-track">
-                    {pitchHistory.map((rev, idx) => {
-                      const prevScore = idx > 0 ? pitchHistory[idx - 1].score : null;
-                      const delta = prevScore !== null ? rev.score - prevScore : null;
-
-                      return (
-                        <div key={rev.id} className="stepper-step-node">
-                          <div className="step-circle" onClick={() => handleRestoreRevision(rev)}>
-                            <span className="step-number">Attempt #{rev.attemptNumber}</span>
-                            <span className="step-score">{rev.score}</span>
-                            {delta !== null && (
-                              <span className={`step-delta ${delta >= 0 ? 'positive' : 'negative'}`}>
-                                {delta >= 0 ? `+${delta}` : delta}
-                              </span>
-                            )}
-                          </div>
-                          <span className="step-meta">{rev.date} &bull; {rev.timestamp}</span>
-                          {idx < pitchHistory.length - 1 && <div className="step-connector-line" />}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Side-by-Side Comparison Selector */}
-                <div className="card-panel comparison-tool-card">
-                  <div className="panel-header-split">
-                    <div className="panel-header">
-                      <span className="panel-icon">⚖️</span>
-                      <h3 className="panel-title">Criteria-by-Criteria Revision Comparison</h3>
-                    </div>
-
-                    <div className="compare-selectors">
-                      <span>Compare: </span>
-                      <select
-                        className="compare-dropdown"
-                        value={compareRevA}
-                        onChange={(e) => setCompareRevA(Number(e.target.value))}
-                      >
-                        {pitchHistory.map((h, i) => (
-                          <option key={h.id} value={i}>Revision #{h.attemptNumber} ({h.score} pts)</option>
-                        ))}
-                      </select>
-                      <span> vs. </span>
-                      <select
-                        className="compare-dropdown"
-                        value={compareRevB}
-                        onChange={(e) => setCompareRevB(Number(e.target.value))}
-                      >
-                        {pitchHistory.map((h, i) => (
-                          <option key={h.id} value={i}>Revision #{h.attemptNumber} ({h.score} pts)</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Summary Delta Banner */}
-                  <div className="delta-summary-box">
-                    <div className="delta-score-big">
-                      <span className="delta-num">
-                        {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta}
-                      </span>
-                      <span className="delta-label">Overall Points Progress ({revA?.score || 0} → {revB?.score || 0})</span>
-                    </div>
-                    <p className="delta-narrative">
-                      {scoreDelta > 0
-                        ? `Great work! Your pitch improved by ${scoreDelta} points through sharper rhetorical structure and proof points.`
-                        : scoreDelta === 0
-                        ? 'No change in overall score between these revisions.'
-                        : `Score decreased by ${Math.abs(scoreDelta)} points. Check missing traction numbers or opening hook length.`}
+                {pitchHistory.length === 0 ? (
+                  <div className="empty-saved-state">
+                    <div className="empty-icon-circle">📈</div>
+                    <h3 className="empty-title">No Score History Yet</h3>
+                    <p className="empty-desc">
+                      Each pitch revision you analyze will automatically be recorded here. Track your score progression and compare exact criteria deltas from your early draft to your final pitch.
                     </p>
+                    <button className="empty-cta-btn" onClick={() => setActiveTab('home')}>
+                      + Analyze Your First Pitch
+                    </button>
                   </div>
+                ) : (
+                  <>
+                    {/* Score Progression Stepper Banner */}
+                    <div className="card-panel progression-stepper-card">
+                      <div className="panel-header">
+                        <span className="panel-icon">📈</span>
+                        <h3 className="panel-title">Score Progression Across Revisions</h3>
+                      </div>
 
-                  {/* 6-Factor Side-by-Side Delta Table */}
-                  <div className="table-responsive-card">
-                    <table className="comparison-table">
-                      <thead>
-                        <tr>
-                          <th>Evaluation Criterion</th>
-                          <th>Revision #{revA?.attemptNumber}</th>
-                          <th>Revision #{revB?.attemptNumber}</th>
-                          <th>Delta</th>
-                          <th>Progress Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {['Clarity & Logic', 'Opening Hook', 'Rhetorical Structure', 'Persuasion & Proof', 'Call-to-Action', 'Investor Confidence'].map(factor => {
-                          const valA = revA?.metrics?.[factor] || 0;
-                          const valB = revB?.metrics?.[factor] || 0;
-                          const delta = valB - valA;
+                      <div className="stepper-horizontal-track">
+                        {pitchHistory.map((rev, idx) => {
+                          const prevScore = idx > 0 ? pitchHistory[idx - 1].score : null;
+                          const delta = prevScore !== null ? rev.score - prevScore : null;
 
                           return (
-                            <tr key={factor}>
-                              <td><strong>{factor}</strong></td>
-                              <td>{valA}/100</td>
-                              <td><strong>{valB}/100</strong></td>
-                              <td>
-                                <span className={`delta-pill ${delta > 0 ? 'gain' : delta < 0 ? 'drop' : 'neutral'}`}>
-                                  {delta > 0 ? `+${delta}` : delta}
-                                </span>
-                              </td>
-                              <td>
-                                {delta > 0 ? (
-                                  <span className="status-improved">✔ Improved (+{delta}%)</span>
-                                ) : delta === 0 ? (
-                                  <span className="status-unchanged">&mdash; Unchanged</span>
-                                ) : (
-                                  <span className="status-regressed">⚠️ Needs Review</span>
+                            <div key={rev.id} className="stepper-step-node">
+                              <div className="step-circle" onClick={() => handleRestoreRevision(rev)}>
+                                <span className="step-number">Attempt #{rev.attemptNumber}</span>
+                                <span className="step-score">{rev.score}</span>
+                                {delta !== null && (
+                                  <span className={`step-delta ${delta >= 0 ? 'positive' : 'negative'}`}>
+                                    {delta >= 0 ? `+${delta}` : delta}
+                                  </span>
                                 )}
-                              </td>
-                            </tr>
+                              </div>
+                              <span className="step-meta">{rev.date} &bull; {rev.timestamp}</span>
+                              {idx < pitchHistory.length - 1 && <div className="step-connector-line" />}
+                            </div>
                           );
                         })}
-                      </tbody>
-                    </table>
-                  </div>
+                      </div>
+                    </div>
 
-                </div>
+                    {pitchHistory.length === 1 ? (
+                      <div className="card-panel single-revision-info-card">
+                        <div className="single-rev-icon">🎯</div>
+                        <div className="single-rev-content">
+                          <h4>Attempt #1 Recorded (Score: {pitchHistory[0].score}/100)</h4>
+                          <p>
+                            You have recorded your first revision! Make edits to your pitch script and click &quot;Analyze Script&quot; to create Attempt #2 and unlock the side-by-side criteria delta comparison.
+                          </p>
+                          <button className="empty-cta-btn" onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                            ✏️ Edit Pitch & Create Attempt #2
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Side-by-Side Comparison Selector */
+                      <div className="card-panel comparison-tool-card">
+                        <div className="panel-header-split">
+                          <div className="panel-header">
+                            <span className="panel-icon">⚖️</span>
+                            <h3 className="panel-title">Criteria-by-Criteria Revision Comparison</h3>
+                          </div>
 
-                {/* Past Analyses Table */}
-                <div className="card-panel">
-                  <div className="panel-header">
-                    <span className="panel-icon">📁</span>
-                    <h3 className="panel-title">All Analyzed Revisions</h3>
-                  </div>
+                          <div className="compare-selectors">
+                            <span>Compare: </span>
+                            <select
+                              className="compare-dropdown"
+                              value={compareRevA}
+                              onChange={(e) => setCompareRevA(Number(e.target.value))}
+                            >
+                              {pitchHistory.map((h, i) => (
+                                <option key={h.id} value={i}>Revision #{h.attemptNumber} ({h.score} pts)</option>
+                              ))}
+                            </select>
+                            <span> vs. </span>
+                            <select
+                              className="compare-dropdown"
+                              value={compareRevB}
+                              onChange={(e) => setCompareRevB(Number(e.target.value))}
+                            >
+                              {pitchHistory.map((h, i) => (
+                                <option key={h.id} value={i}>Revision #{h.attemptNumber} ({h.score} pts)</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
 
-                  <div className="table-responsive-card">
-                    <table className="saved-data-table">
-                      <thead>
-                        <tr>
-                          <th>Revision</th>
-                          <th>Pitch Excerpt</th>
-                          <th>Investability Score</th>
-                          <th>Date & Time</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pitchHistory.slice().reverse().map(rev => (
-                          <tr key={rev.id}>
-                            <td><strong>Attempt #{rev.attemptNumber}</strong></td>
-                            <td className="saved-title-cell">
-                              <p className="saved-snippet">{rev.pitchText.slice(0, 95)}...</p>
-                            </td>
-                            <td>
-                              <span className={`table-score-pill ${rev.score >= 75 ? 'green' : rev.score >= 60 ? 'amber' : 'gray'}`}>
-                                {rev.score}/100
-                              </span>
-                            </td>
-                            <td>{rev.date} at {rev.timestamp}</td>
-                            <td>
-                              <button
-                                className="secondary-action-btn"
-                                onClick={() => handleRestoreRevision(rev)}
-                              >
-                                Restore in Editor →
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                        {/* Summary Delta Banner */}
+                        <div className="delta-summary-box">
+                          <div className="delta-score-big">
+                            <span className="delta-num">
+                              {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta}
+                            </span>
+                            <span className="delta-label">Overall Points Progress ({revA?.score || 0} → {revB?.score || 0})</span>
+                          </div>
+                          <p className="delta-narrative">
+                            {scoreDelta > 0
+                              ? `Great work! Your pitch improved by ${scoreDelta} points through sharper rhetorical structure and proof points.`
+                              : scoreDelta === 0
+                              ? 'No change in overall score between these revisions.'
+                              : `Score decreased by ${Math.abs(scoreDelta)} points. Check missing traction numbers or opening hook length.`}
+                          </p>
+                        </div>
+
+                        {/* 6-Factor Side-by-Side Delta Table */}
+                        <div className="table-responsive-card">
+                          <table className="comparison-table">
+                            <thead>
+                              <tr>
+                                <th>Evaluation Criterion</th>
+                                <th>Revision #{revA?.attemptNumber}</th>
+                                <th>Revision #{revB?.attemptNumber}</th>
+                                <th>Delta</th>
+                                <th>Progress Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {['Clarity & Logic', 'Opening Hook', 'Rhetorical Structure', 'Persuasion & Proof', 'Call-to-Action', 'Investor Confidence'].map(factor => {
+                                const valA = revA?.metrics?.[factor] || 0;
+                                const valB = revB?.metrics?.[factor] || 0;
+                                const delta = valB - valA;
+
+                                return (
+                                  <tr key={factor}>
+                                    <td><strong>{factor}</strong></td>
+                                    <td>{valA}/100</td>
+                                    <td><strong>{valB}/100</strong></td>
+                                    <td>
+                                      <span className={`delta-pill ${delta > 0 ? 'gain' : delta < 0 ? 'drop' : 'neutral'}`}>
+                                        {delta > 0 ? `+${delta}` : delta}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      {delta > 0 ? (
+                                        <span className="status-improved">✔ Improved (+{delta}%)</span>
+                                      ) : delta === 0 ? (
+                                        <span className="status-unchanged">&mdash; Unchanged</span>
+                                      ) : (
+                                        <span className="status-regressed">⚠️ Needs Review</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                      </div>
+                    )}
+
+                    {/* Past Analyses Table */}
+                    <div className="card-panel">
+                      <div className="panel-header">
+                        <span className="panel-icon">📁</span>
+                        <h3 className="panel-title">All Analyzed Revisions</h3>
+                      </div>
+
+                      <div className="table-responsive-card">
+                        <table className="saved-data-table">
+                          <thead>
+                            <tr>
+                              <th>Revision</th>
+                              <th>Pitch Excerpt</th>
+                              <th>Investability Score</th>
+                              <th>Date & Time</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pitchHistory.slice().reverse().map(rev => (
+                              <tr key={rev.id}>
+                                <td><strong>Attempt #{rev.attemptNumber}</strong></td>
+                                <td className="saved-title-cell">
+                                  <p className="saved-snippet">{rev.pitchText.slice(0, 95)}...</p>
+                                </td>
+                                <td>
+                                  <span className={`table-score-pill ${rev.score >= 75 ? 'green' : rev.score >= 60 ? 'amber' : 'gray'}`}>
+                                    {rev.score}/100
+                                  </span>
+                                </td>
+                                <td>{rev.date} at {rev.timestamp}</td>
+                                <td>
+                                  <button
+                                    className="secondary-action-btn"
+                                    onClick={() => handleRestoreRevision(rev)}
+                                  >
+                                    Restore in Editor →
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* History Bottom Action */}
                 <div className="results-bottom-actions">
