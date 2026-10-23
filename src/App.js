@@ -5,12 +5,6 @@ import { extractTextFromPDF, analyzePitchDeck } from './pdfDeckAnalyzer';
 import './App.css';
 
 // Initial seed history for immediate demonstration
-const DEFAULT_USER = {
-  name: 'Akshat Solanki',
-  email: 'akshat@pitchiq.ai',
-  role: 'Founder / Project Lead'
-};
-
 const INITIAL_HISTORY = [
   {
     id: 'rev-1',
@@ -74,14 +68,14 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const stored = localStorage.getItem('pitchiq_auth_user');
-      return stored ? JSON.parse(stored) : DEFAULT_USER;
+      return stored ? JSON.parse(stored) : null;
     } catch {
-      return DEFAULT_USER;
+      return null;
     }
   });
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
+  const [authMode, setAuthMode] = useState('signup'); // starts with sign up page
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authName, setAuthName] = useState('');
@@ -337,6 +331,131 @@ export default function App() {
   const revA = pitchHistory[compareRevA] || pitchHistory[0];
   const revB = pitchHistory[compareRevB] || pitchHistory[pitchHistory.length - 1];
   const scoreDelta = revB && revA ? revB.score - revA.score : 0;
+
+  // ── START WITH SIGN UP PAGE IF NOT LOGGED IN ──
+  if (!currentUser) {
+    return (
+      <div className="auth-fullscreen-page">
+        <div className="floating-shape shape-left" aria-hidden="true" />
+        <div className="floating-shape shape-right" aria-hidden="true" />
+
+        <div className="auth-fullscreen-container">
+          <div className="auth-brand-lockup">
+            <span className="brand-logo">PitchIQ</span>
+            <span className="brand-dot" />
+          </div>
+          <p className="auth-brand-tagline">
+            AI-Powered Pitch Intelligence &bull; Venture Benchmark Engine
+          </p>
+
+          <div className="auth-card-modal standalone">
+            <div className="auth-mode-toggle">
+              <button
+                className={`auth-toggle-tab ${authMode === 'signup' ? 'active' : ''}`}
+                onClick={() => setAuthMode('signup')}
+              >
+                Sign Up
+              </button>
+              <button
+                className={`auth-toggle-tab ${authMode === 'login' ? 'active' : ''}`}
+                onClick={() => setAuthMode('login')}
+              >
+                Sign In
+              </button>
+            </div>
+
+            <h3 className="auth-title">
+              {authMode === 'signup' ? 'Create Your PitchIQ Account' : 'Welcome Back to PitchIQ'}
+            </h3>
+            <p className="auth-sub">
+              {authMode === 'signup'
+                ? 'Join founders getting AI-powered pitch script & slide deck evaluations backed by 200+ venture deals.'
+                : 'Sign in to access your saved pitches, revision progression, and venture benchmarks.'}
+            </p>
+
+            <form onSubmit={handleAuthSubmit} className="auth-form">
+              {authMode === 'signup' && (
+                <div className="form-group">
+                  <label>Full Name</label>
+                  <input
+                    type="text"
+                    className="auth-input"
+                    placeholder="e.g. Parth Bavalliya"
+                    value={authName}
+                    onChange={(e) => setAuthName(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+
+              <div className="form-group">
+                <label>Email Address</label>
+                <input
+                  type="email"
+                  className="auth-input"
+                  placeholder="name@company.com"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Password</label>
+                <input
+                  type="password"
+                  className="auth-input"
+                  placeholder="••••••••"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              <button type="submit" className="auth-submit-btn">
+                {authMode === 'signup' ? 'Create Account &rarr;' : 'Sign In &rarr;'}
+              </button>
+
+              <div className="auth-divider">
+                <span>OR 1-CLICK DEMO LOGIN</span>
+              </div>
+
+              <div className="demo-accounts-row">
+                <button
+                  type="button"
+                  className="demo-account-pill"
+                  onClick={() => handleDemoLogin('Parth Bavalliya', 'parth@pitchiq.ai')}
+                >
+                  🚀 Sign in as Parth (Lead)
+                </button>
+                <button
+                  type="button"
+                  className="demo-account-pill"
+                  onClick={() => handleDemoLogin('Akshat Solanki', 'akshat@pitchiq.ai')}
+                >
+                  👤 Sign in as Akshat (Co-Founder)
+                </button>
+              </div>
+
+              <div className="guest-explore-row">
+                <button
+                  type="button"
+                  className="guest-explore-btn"
+                  onClick={() => handleDemoLogin('Guest Founder', 'guest@pitchiq.ai')}
+                >
+                  Or explore as Guest &rarr;
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <footer className="auth-page-footer">
+            <span>PitchIQ &bull; Backed by real venture capital criteria & startup case studies</span>
+          </footer>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
