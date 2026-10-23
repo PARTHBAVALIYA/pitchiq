@@ -1,12 +1,168 @@
 // Curated Knowledge Base of Venture Capital & Early Stage Pitches
-// Used for Retrieval-Augmented Pitch Evaluation (RAG)
+// Used for Retrieval-Augmented Pitch Evaluation (RAG) and Deal Database
 
 export const VENTURE_DEAL_CORPUS = [
   {
     id: "case-01",
+    name: "OpenAI",
+    industry: "AI / Machine Learning",
+    stage: "Series B",
+    amount: "$12,000,000",
+    equity: "20%",
+    year: "2019",
+    ask: "$12,000,000 for 20%",
+    valuation: "$60,000,000",
+    outcome: "Funded",
+    investor: "Khosla Ventures & Microsoft",
+    summary: "Large-scale artificial general intelligence research lab building foundational transformer neural networks.",
+    hook: "Human intelligence is the single bottleneck to accelerating scientific breakthroughs and global productivity.",
+    strengths: [
+      "World-class foundational AI research talent",
+      "Pioneering generative transformer architectures with massive scaling laws",
+      "High multi-billion dollar enterprise partnership potential"
+    ],
+    weaknessesFlagged: [
+      "Immense cloud compute expenditure requiring continuous deep capital reserves"
+    ],
+    investorFeedback: "Lead Partner: 'The compute requirements are massive, but whoever achieves foundational intelligence dominance wins the next century of computing.'",
+    keywords: ["ai", "machine learning", "artificial intelligence", "transformer", "neural", "software", "cloud", "tech", "data"]
+  },
+  {
+    id: "case-02",
+    name: "Figma",
+    industry: "Design Tools",
+    stage: "Series C",
+    amount: "$50,000,000",
+    equity: "15%",
+    year: "2021",
+    ask: "$50,000,000 for 15%",
+    valuation: "$333,000,000",
+    outcome: "Funded",
+    investor: "Sequoia Capital & Greylock",
+    summary: "Browser-first collaborative interface design and prototyping tool eliminating desktop software silos.",
+    hook: "Designers work in isolated desktop files, while developers and product teams have no real-time collaboration canvas.",
+    strengths: [
+      "In-browser WebGL rendering engine with zero local installation",
+      "Hyper-viral bottom-up product adoption inside tech companies",
+      "Over 140% Net Dollar Retention (NDR) from design teams"
+    ],
+    weaknessesFlagged: [
+      "Direct competition from legacy incumbent Adobe Creative Cloud"
+    ],
+    investorFeedback: "Growth Partner: 'Moving creative tooling from single-player desktop into multiplayer real-time web creates an unshakeable network effect.'",
+    keywords: ["design", "ui", "collaboration", "saas", "software", "browser", "figma", "prototyping", "web", "team"]
+  },
+  {
+    id: "case-03",
+    name: "Notion",
+    industry: "Productivity",
+    stage: "Series B",
+    amount: "$10,000,000",
+    equity: "10%",
+    year: "2018",
+    ask: "$10,000,000 for 10%",
+    valuation: "$100,000,000",
+    outcome: "Funded",
+    investor: "Index Ventures",
+    summary: "All-in-one flexible workspace combining documents, wikis, and databases into modular Lego-like blocks.",
+    hook: "Knowledge workers are drowning in five fragmented apps—docs in Google, tasks in Trello, and notes in Evernote.",
+    strengths: [
+      "Cult-like organic community creating and selling custom templates",
+      "High software gross margins (85%+) with profitable unit economics",
+      "Single tool replacing fragmented software subscriptions"
+    ],
+    weaknessesFlagged: [
+      "Blank canvas syndrome requiring user onboarding education"
+    ],
+    investorFeedback: "Venture Lead: 'When users build their own workflow tools inside your software, switching costs become practically insurmountable.'",
+    keywords: ["productivity", "workspace", "notes", "database", "wiki", "docs", "saas", "software", "collaboration", "management"]
+  },
+  {
+    id: "case-04",
+    name: "Doorbot (Ring)",
+    industry: "Consumer IoT",
+    stage: "Series A",
+    amount: "$700,000",
+    equity: "10%",
+    year: "2013",
+    ask: "$700,000 for 10%",
+    valuation: "$7,000,000",
+    outcome: "Cautionary",
+    investor: "Independent (Acquired by Amazon for $1B+)",
+    summary: "Wi-Fi enabled video doorbell streaming live camera feed to your smartphone to deter burglars.",
+    hook: "Over 2 million home break-ins happen every year, and 80% of burglars ring the doorbell first to see if anyone is home.",
+    strengths: [
+      "Compelling problem-first statistic on home safety",
+      "Massive market tailwind in mobile IoT hardware",
+      "Early traction with $1M in sales"
+    ],
+    weaknessesFlagged: [
+      "High manufacturing cost and low initial gross margins (<28%)",
+      "High customer acquisition cost and unproven cloud recurring subscription model",
+      "Too expensive hardware price tag ($199) with risk of copycat giants entering"
+    ],
+    investorFeedback: "Lead VC: 'I don't think you're a product that can stand alone against big tech incumbents. The cost of customer acquisition will eat you alive without higher margins.'",
+    keywords: ["security", "doorbell", "camera", "wifi", "iot", "hardware", "home", "burglar", "app", "tech", "video"]
+  },
+  {
+    id: "case-05",
+    name: "Stripe",
+    industry: "Fintech",
+    stage: "Series A",
+    amount: "$2,000,000",
+    equity: "8%",
+    year: "2011",
+    ask: "$2,000,000 for 8%",
+    valuation: "$25,000,000",
+    outcome: "Funded",
+    investor: "Peter Thiel, Elon Musk & Sequoia",
+    summary: "Seven lines of code that allow any developer in the world to accept instant credit card payments online.",
+    hook: "Accepting online payments requires weeks of merchant account approvals, paper forms, and archaic bank gateways.",
+    strengths: [
+      "Developer-first API with seamless 5-minute setup documentation",
+      "Zero sales team needed; viral developer word-of-mouth adoption",
+      "Transaction take-rate business model scaling directly with client revenue"
+    ],
+    weaknessesFlagged: [
+      "Financial regulatory compliance and multi-currency fraud liability"
+    ],
+    investorFeedback: "Fintech Angel: 'Transforming a six-week bureaucratic banking nightmare into seven lines of code is the ultimate software wedge.'",
+    keywords: ["fintech", "payment", "api", "developer", "credit card", "banking", "checkout", "ecommerce", "saas", "money"]
+  },
+  {
+    id: "case-06",
+    name: "SaaS & AI DevTools (YC Model)",
+    industry: "Software & SaaS",
+    stage: "Seed Round",
+    amount: "$500,000",
+    equity: "7%",
+    year: "2023",
+    ask: "$500,000 for 7%",
+    valuation: "$7,100,000",
+    outcome: "Funded",
+    investor: "Top Tier VC",
+    summary: "Automated developer pipeline for microservices testing and observability.",
+    hook: "Software engineering teams spend 35% of their working hours manually debugging distributed cloud environments instead of writing code.",
+    strengths: [
+      "Negative revenue churn with 130% Net Dollar Retention (NDR)",
+      "Fast bottom-up developer adoption (product-led growth)",
+      "Zero customer acquisition cost via open-source community"
+    ],
+    weaknessesFlagged: [
+      "Long sales cycles when transitioning from individual developers to enterprise CIOs",
+      "Rapidly changing AI framework dependencies"
+    ],
+    investorFeedback: "Tech VC: 'The 130% NDR tells me once an engineering team plugs this in, they never turn it off. That's the hallmark of an essential utility.'",
+    keywords: ["software", "saas", "developer", "cloud", "api", "ai", "code", "platform", "tool", "enterprise", "tech"]
+  },
+  {
+    id: "case-07",
     name: "Scrub Daddy",
-    stage: "Seed Round ($100k)",
     industry: "Consumer Goods",
+    stage: "Seed Round",
+    amount: "$100,000",
+    equity: "10%",
+    year: "2012",
     ask: "$100,000 for 10%",
     valuation: "$1,000,000",
     outcome: "Funded",
@@ -25,34 +181,13 @@ export const VENTURE_DEAL_CORPUS = [
     keywords: ["sponge", "cleaning", "household", "texture", "polymer", "kitchen", "dishes", "patent", "retail", "consumer"]
   },
   {
-    id: "case-02",
-    name: "Doorbot (Ring)",
-    stage: "Series A ($700k)",
-    industry: "Tech & Hardware",
-    ask: "$700,000 for 10%",
-    valuation: "$7,000,000",
-    outcome: "Rejected",
-    investor: "Independent (Acquired by Amazon for $1B+)",
-    summary: "Wi-Fi enabled video doorbell streaming live camera feed to your smartphone to deter burglars.",
-    hook: "Over 2 million home break-ins happen every year, and 80% of burglars ring the doorbell first to see if anyone is home.",
-    strengths: [
-      "Compelling problem-first statistic on home safety",
-      "Massive market tailwind in mobile IoT hardware",
-      "Early traction with $1M in sales"
-    ],
-    weaknessesFlagged: [
-      "High manufacturing cost and low initial gross margins (<28%)",
-      "High customer acquisition cost and unproven cloud recurring subscription model",
-      "Too expensive hardware price tag ($199) with risk of copycat giants entering"
-    ],
-    investorFeedback: "Lead VC: 'I don't think you're a product that can stand alone against big tech incumbents. The cost of customer acquisition will eat you alive without higher margins.'",
-    keywords: ["security", "doorbell", "camera", "wifi", "iot", "hardware", "home", "burglar", "app", "tech", "video"]
-  },
-  {
-    id: "case-03",
+    id: "case-08",
     name: "Bombas",
-    stage: "Seed Round ($200k)",
     industry: "Apparel & D2C",
+    stage: "Seed Round",
+    amount: "$200,000",
+    equity: "5%",
+    year: "2014",
     ask: "$200,000 for 5%",
     valuation: "$4,000,000",
     outcome: "Funded",
@@ -60,25 +195,27 @@ export const VENTURE_DEAL_CORPUS = [
     summary: "Engineered premium socks designed for comfort with a mission-driven 1-for-1 donation model.",
     hook: "Socks are the number one requested clothing item at homeless shelters, yet the basic gym sock hasn't been re-engineered in over 50 years.",
     strengths: [
-      "Deep emotional mission paired with superior product engineering (stay-up technology, blister tab)",
+      "Deep emotional mission paired with superior product engineering",
       "High repeat purchase rate (45%+) via direct-to-consumer e-commerce",
       "$1.2M in first-year sales proving market demand"
     ],
     weaknessesFlagged: [
-      "Giving away one pair for every pair sold places heavy pressure on unit margins",
-      "Commodity apparel risk requiring high ongoing digital ad spend"
+      "Giving away one pair for every pair sold places heavy pressure on unit margins"
     ],
-    investorFeedback: "Brand Partner: 'The mission drives the viral word-of-mouth, but the 80% repeat customers proves the engineering delivers. That's a sustainable D2C business.'",
+    investorFeedback: "Brand Partner: 'The mission drives the viral word-of-mouth, but the 80% repeat customers proves the engineering delivers.'",
     keywords: ["socks", "apparel", "clothing", "d2c", "ecommerce", "donation", "mission", "comfort", "fashion"]
   },
   {
-    id: "case-04",
+    id: "case-09",
     name: "Copa Di Vino",
-    stage: "Growth Round ($600k)",
     industry: "Food & Beverage",
+    stage: "Growth Round",
+    amount: "$600,000",
+    equity: "20%",
+    year: "2011",
     ask: "$600,000 for 20%",
     valuation: "$3,000,000",
-    outcome: "Rejected",
+    outcome: "Cautionary",
     investor: "None (Passed by all investors)",
     summary: "Single-serve premium wine packaged in patented splash-proof plastic stemware for venues and outdoor events.",
     hook: "Every outdoor stadium, concert, and golf course wants to sell premium wine, but glass bottles are prohibited and plastic cups ruin the aroma.",
@@ -87,64 +224,20 @@ export const VENTURE_DEAL_CORPUS = [
       "Proprietary packaging and bottling equipment with patent protection"
     ],
     weaknessesFlagged: [
-      "Founder refused to license the packaging technology, insisting on being a wine maker rather than a high-margin packaging IP company",
-      "Antagonistic attitude toward investor terms and strategic guidance",
-      "High inventory carrying costs and complex multi-state alcohol distributor laws"
+      "Founder refused to license the packaging technology, insisting on being a low-margin winemaker",
+      "Antagonistic attitude toward investor terms and strategic guidance"
     ],
-    investorFeedback: "Venture Lead: 'You're sitting on a multi-million dollar packaging patent, but you insist on being a low-margin winery. You are burning money by fighting your biggest asset.'",
+    investorFeedback: "Venture Lead: 'You are sitting on a multi-million dollar packaging patent, but you insist on being a low-margin winery. You are fighting your biggest asset.'",
     keywords: ["wine", "beverage", "alcohol", "drink", "packaging", "stadium", "glass", "single-serve", "patent", "liquor"]
   },
   {
-    id: "case-05",
-    name: "Drop Stop",
-    stage: "Seed Round ($300k)",
-    industry: "Automotive & Safety",
-    ask: "$300,000 for 15%",
-    valuation: "$2,000,000",
-    outcome: "Funded",
-    investor: "Strategic Angel Investor",
-    summary: "Patented neoprene car seat gap filler preventing phones, keys, and coins from falling into the unreachable Carmuda Triangle.",
-    hook: "80% of all car accidents occur because drivers take their eyes off the road for just 3 seconds searching for a dropped phone between their seats.",
-    strengths: [
-      "Solved a universal daily frustration that every driver immediately recognizes",
-      "Clear utility patent covering the seatbelt slot surround",
-      "Demonstrable live pitch with 100% universal fit"
-    ],
-    weaknessesFlagged: [
-      "One-time purchase product with limited lifetime customer value (low LTV)",
-      "High vulnerability to cheap offshore knockoffs on open marketplaces"
-    ],
-    investorFeedback: "Consumer Angel: 'This is an impulse buy with zero friction. You show the problem once, people nod, and they buy it on the spot.'",
-    keywords: ["car", "automotive", "gap", "seat", "drop", "phone", "keys", "safety", "driving", "neoprene"]
-  },
-  {
-    id: "case-06",
-    name: "Kodiak Cakes",
-    stage: "Growth Round ($500k)",
-    industry: "Food & CPG",
-    ask: "$500,000 for 10%",
-    valuation: "$5,000,000",
-    outcome: "Rejected",
-    investor: "None (Grew independently to $200M+ revenue)",
-    summary: "100% whole grain, high-protein pancake and waffle mix powered by non-GMO ingredients.",
-    hook: "Traditional breakfast foods are empty carbohydrates that leave you sluggish by 10 AM. What if pancake breakfast fueled peak athletic performance?",
-    strengths: [
-      "Pioneered the high-protein breakfast category before legacy food brands caught on",
-      "Established shelf placement in Target and regional supermarket chains",
-      "Strong brand identity and clean ingredient label"
-    ],
-    weaknessesFlagged: [
-      "Low cash reserves relative to aggressive nationwide retail expansion plans",
-      "High shelf-space slotting fees demanded by major national grocers"
-    ],
-    investorFeedback: "CPG Fund: 'Great product, but competing against breakfast giants in center-store grocery requires immense capital reserves to defend shelf space.'",
-    keywords: ["pancake", "protein", "breakfast", "food", "cpg", "grocery", "waffle", "nutrition", "grain", "fitness"]
-  },
-  {
-    id: "case-07",
+    id: "case-10",
     name: "Simple Sugars",
-    stage: "Angel Round ($100k)",
     industry: "Beauty & Personal Care",
+    stage: "Angel Round",
+    amount: "$100,000",
+    equity: "33%",
+    year: "2013",
     ask: "$100,000 for 33%",
     valuation: "$300,000",
     outcome: "Funded",
@@ -161,29 +254,6 @@ export const VENTURE_DEAL_CORPUS = [
     ],
     investorFeedback: "Growth Investor: 'I love founders who master their unit economics. Making a jar for $2.40 and selling it for $14 gives you the healthy margin needed to scale digital customer acquisition.'",
     keywords: ["skincare", "skin", "eczema", "sugar", "beauty", "cosmetics", "lotion", "organic", "natural", "dermatology"]
-  },
-  {
-    id: "case-08",
-    name: "SaaS & AI DevTools (YC Model)",
-    stage: "Seed Round ($500k)",
-    industry: "Software & SaaS",
-    ask: "$500,000 for 7%",
-    valuation: "$7,100,000",
-    outcome: "Funded",
-    investor: "Top Tier VC",
-    summary: "Automated developer pipeline for microservices testing and observability.",
-    hook: "Software engineering teams spend 35% of their working hours manually debugging distributed cloud environments instead of writing code.",
-    strengths: [
-      "Negative revenue churn with 130% Net Dollar Retention (NDR)",
-      "Fast bottom-up developer adoption (product-led growth)",
-      "Zero customer acquisition cost via open-source community"
-    ],
-    weaknessesFlagged: [
-      "Long sales cycles when transitioning from individual developers to enterprise CIOs",
-      "Rapidly changing AI framework dependencies"
-    ],
-    investorFeedback: "Tech VC: 'The 130% NDR tells me once an engineering team plugs this in, they never turn it off. That's the hallmark of an essential utility.'",
-    keywords: ["software", "saas", "developer", "cloud", "api", "ai", "code", "platform", "tool", "enterprise", "tech"]
   }
 ];
 
@@ -241,5 +311,4 @@ export const INVESTOR_PERSONAS = [
   }
 ];
 
-// Compatibility alias
 export const SHARK_PERSONAS = INVESTOR_PERSONAS;
