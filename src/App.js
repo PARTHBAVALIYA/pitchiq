@@ -455,79 +455,179 @@ export default function App() {
   return (
     <div className="app-container">
 
-      {/* ── Top Navigation Bar ── */}
-      {activeTab === 'home' && (
-        <header className="top-nav">
-          <div className="nav-inner">
-            <div className="nav-brand" onClick={() => setActiveTab('home')}>
-              <span className="brand-logo">PitchIQ</span>
-              <span className="brand-dot" />
-            </div>
+      {/* ══════════════════════════════════════════════════════════════
+          MAIN DASHBOARD SHELL (Universal Sidebar & Workspace across all tabs)
+      ══════════════════════════════════════════════════════════════ */}
+      <div className="dashboard-layout">
+        {/* ── Left Sidebar Navigation (Always Visible) ── */}
+        <aside className="dashboard-sidebar">
+          <div className="sidebar-brand" onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+            <span className="brand-logo">PitchIQ</span>
+            <span className="brand-dot" />
+          </div>
 
-            <nav className="nav-menu">
+          <nav className="sidebar-menu">
+            <button
+              className={`sidebar-link ${activeTab === 'home' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            >
+              <span className="sidebar-icon">📝</span>
+              Pitch Input
+            </button>
+
+            <button
+              className={`sidebar-link ${activeTab === 'results' ? 'active' : ''}`}
+              onClick={() => setActiveTab('results')}
+            >
+              <span className="sidebar-icon">📊</span>
+              Pitch Analysis
+            </button>
+
+            <button
+              className={`sidebar-link ${activeTab === 'history' ? 'active' : ''}`}
+              onClick={() => setActiveTab('history')}
+            >
+              <span className="sidebar-icon">📈</span>
+              Score Comparison
+            </button>
+
+            <button
+              className={`sidebar-link ${activeTab === 'saved' ? 'active' : ''}`}
+              onClick={() => setActiveTab('saved')}
+            >
+              <span className="sidebar-icon">💾</span>
+              Saved Pitches
+            </button>
+
+            <button
+              className="sidebar-link"
+              onClick={() => setShowHowItWorks(true)}
+            >
+              <span className="sidebar-icon">💡</span>
+              How It Works
+            </button>
+          </nav>
+
+          {/* Upgrade to Pro Card */}
+          <div className="sidebar-pro-card">
+            <div className="pro-card-header">
+              <span className="pro-crown">👑</span>
+              <strong className="pro-title">Upgrade to Pro</strong>
+            </div>
+            <ul className="pro-features">
+              <li>✓ Unlimited analyses</li>
+              <li>✓ Advanced insights</li>
+              <li>✓ Export reports</li>
+            </ul>
+            <button className="pro-upgrade-btn" onClick={() => setShowAuthModal(true)}>
+              Upgrade
+            </button>
+          </div>
+        </aside>
+
+        {/* ── Main Dashboard Workspace ── */}
+        <div className="dashboard-main">
+
+          {/* Top Workspace Header */}
+          <header className="dashboard-header">
+            <div className="header-left-cluster">
               {activeTab !== 'home' && (
                 <button
-                  className="nav-item nav-back-btn"
+                  className="dashboard-back-btn"
                   onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   title="Back to Pitch Input"
+                  aria-label="Back to Pitch Input"
                 >
-                  ← Back to Pitch
+                  <span className="back-arrow">←</span>
+                  <span className="back-text">Back to Pitch</span>
                 </button>
               )}
-              <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>
-                Home
-              </button>
-              <button className={`nav-item ${activeTab === 'results' ? 'active' : ''}`} onClick={() => setActiveTab('results')}>
-                Pitch Analysis
-              </button>
-              <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
-                Score Comparison
-              </button>
-              <button className={`nav-item ${activeTab === 'saved' ? 'active' : ''}`} onClick={() => setActiveTab('saved')}>
-                Saved Pitches
-              </button>
-              <button className="nav-item" onClick={() => setShowHowItWorks(true)}>
-                How It Works
-              </button>
-            </nav>
 
-            {/* User Profile / Auth State */}
-            {currentUser ? (
-              <div className="nav-profile-container">
-                <div className="nav-profile" onClick={() => setUserDropdownOpen(!userDropdownOpen)}>
-                  <span className="avatar-circle">{currentUser.name.charAt(0).toUpperCase()}</span>
-                  <span className="profile-name">{currentUser.name.split(' ')[0]}</span>
-                  <span className="profile-chevron">▾</span>
-                </div>
-
-                {userDropdownOpen && (
-                  <div className="profile-dropdown-card">
-                    <div className="dropdown-user-info">
-                      <strong>{currentUser.name}</strong>
-                      <span className="dropdown-email">{currentUser.email}</span>
-                    </div>
-                    <div className="dropdown-divider" />
-                    <button className="dropdown-item" onClick={() => { setActiveTab('history'); setUserDropdownOpen(false); }}>
-                      📈 Score Comparison History
-                    </button>
-                    <button className="dropdown-item" onClick={() => { setActiveTab('saved'); setUserDropdownOpen(false); }}>
-                      💾 Saved Pitches
-                    </button>
-                    <div className="dropdown-divider" />
-                    <button className="dropdown-item logout" onClick={handleLogout}>
-                      🚪 Sign Out
-                    </button>
-                  </div>
+              <div className="header-titles">
+                {activeTab === 'home' && (
+                  <>
+                    <h2 className="page-heading">Pitch Input & Evaluation Studio</h2>
+                    <p className="page-subheading">Refine your pitch script or upload a slide deck for instant VC diagnostic scoring.</p>
+                  </>
+                )}
+                {activeTab === 'results' && (
+                  <>
+                    <h2 className="page-heading">Pitch Analysis Results</h2>
+                    <p className="page-subheading">AI-powered evaluation based on investor criteria and real venture data.</p>
+                  </>
+                )}
+                {activeTab === 'history' && (
+                  <>
+                    <h2 className="page-heading">Pitch History & Score Comparison</h2>
+                    <p className="page-subheading">Track your progress across iterations and compare exact criteria deltas.</p>
+                  </>
+                )}
+                {activeTab === 'saved' && (
+                  <>
+                    <h2 className="page-heading">Saved Pitches</h2>
+                    <p className="page-subheading">Manage and revisit your previous pitch analyses.</p>
+                  </>
                 )}
               </div>
-            ) : (
-              <button className="nav-signin-btn" onClick={() => { setAuthMode('login'); setShowAuthModal(true); }}>
-                Sign In
+            </div>
+
+            <div className="header-actions">
+              {activeTab === 'results' && (
+                <>
+                  <button className="secondary-action-btn" onClick={() => setShowReportModal(true)}>
+                    📥 Download PDF Report
+                  </button>
+                  <button className="primary-gradient-btn" onClick={handleSaveCurrentPitch}>
+                    💾 {saveSuccessMsg ? 'Saved! ✓' : 'Save Pitch'}
+                  </button>
+                </>
+              )}
+
+              {activeTab === 'saved' && (
+                <button className="primary-gradient-btn" onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                  + New Analysis
+                </button>
+              )}
+
+              <button className="secondary-action-btn" onClick={() => setShowHowItWorks(true)}>
+                💡 How It Works
               </button>
-            )}
-          </div>
-        </header>
-      )}
+
+              {currentUser ? (
+                <div className="nav-profile-container">
+                  <div className="nav-profile" onClick={() => setUserDropdownOpen(!userDropdownOpen)}>
+                    <span className="avatar-circle">{currentUser.name.charAt(0).toUpperCase()}</span>
+                    <span className="profile-name">{currentUser.name.split(' ')[0]}</span>
+                    <span className="profile-chevron">▾</span>
+                  </div>
+
+                  {userDropdownOpen && (
+                    <div className="profile-dropdown-card">
+                      <div className="dropdown-user-info">
+                        <strong>{currentUser.name}</strong>
+                        <span className="dropdown-email">{currentUser.email}</span>
+                      </div>
+                      <div className="dropdown-divider" />
+                      <button className="dropdown-item" onClick={() => { setActiveTab('history'); setUserDropdownOpen(false); }}>
+                        📈 Score Comparison History
+                      </button>
+                      <button className="dropdown-item" onClick={() => { setActiveTab('saved'); setUserDropdownOpen(false); }}>
+                        💾 Saved Pitches
+                      </button>
+                      <div className="dropdown-divider" />
+                      <button className="dropdown-item logout" onClick={handleLogout}>
+                        🚪 Sign Out
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button className="secondary-action-btn" onClick={() => setShowAuthModal(true)}>
+                  Sign In
+                </button>
+              )}
+            </div>
+          </header>
 
       {/* ══════════════════════════════════════════════════════════════
           SCREEN 1: HERO & PITCH INPUT VIEW (With PDF Upload & Tabs)
@@ -712,142 +812,8 @@ export default function App() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          DASHBOARD SHELL: RESULTS, HISTORY, DATABASE, SAVED PITCHES
+          RESULTS VIEW (Pitch Analysis + Deck Structural Diagnostics)
       ══════════════════════════════════════════════════════════════ */}
-      {activeTab !== 'home' && (
-        <div className="dashboard-layout">
-          {/* ── Left Sidebar Navigation ── */}
-          <aside className="dashboard-sidebar">
-            <div className="sidebar-brand" onClick={() => setActiveTab('home')}>
-              <span className="brand-logo">PitchIQ</span>
-              <span className="brand-dot" />
-            </div>
-
-            <nav className="sidebar-menu">
-              <button
-                className="sidebar-link sidebar-back-link"
-                onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                title="Back to Pitch Input"
-              >
-                <span className="sidebar-icon">←</span>
-                Back to Pitch
-              </button>
-
-              <button
-                className={`sidebar-link ${activeTab === 'results' ? 'active' : ''}`}
-                onClick={() => setActiveTab('results')}
-              >
-                <span className="sidebar-icon">📊</span>
-                Pitch Analysis
-              </button>
-
-              <button
-                className={`sidebar-link ${activeTab === 'history' ? 'active' : ''}`}
-                onClick={() => setActiveTab('history')}
-              >
-                <span className="sidebar-icon">📈</span>
-                Score Comparison
-              </button>
-
-              <button
-                className={`sidebar-link ${activeTab === 'saved' ? 'active' : ''}`}
-                onClick={() => setActiveTab('saved')}
-              >
-                <span className="sidebar-icon">💾</span>
-                Saved Pitches
-              </button>
-            </nav>
-
-            {/* Upgrade to Pro Card */}
-            <div className="sidebar-pro-card">
-              <div className="pro-card-header">
-                <span className="pro-crown">👑</span>
-                <strong className="pro-title">Upgrade to Pro</strong>
-              </div>
-              <ul className="pro-features">
-                <li>✓ Unlimited analyses</li>
-                <li>✓ Advanced insights</li>
-                <li>✓ Export reports</li>
-              </ul>
-              <button className="pro-upgrade-btn" onClick={() => setShowAuthModal(true)}>
-                Upgrade
-              </button>
-            </div>
-          </aside>
-
-          {/* ── Main Dashboard Workspace ── */}
-          <div className="dashboard-main">
-
-            {/* Top Workspace Header */}
-            <header className="dashboard-header">
-              <div className="header-left-cluster">
-                <button
-                  className="dashboard-back-btn"
-                  onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                  title="Back to Pitch Input"
-                  aria-label="Back to Pitch Input"
-                >
-                  <span className="back-arrow">←</span>
-                  <span className="back-text">Back to Pitch</span>
-                </button>
-
-                <div className="header-titles">
-                  {activeTab === 'results' && (
-                    <>
-                      <h2 className="page-heading">Pitch Analysis Results</h2>
-                      <p className="page-subheading">AI-powered evaluation based on investor criteria and real venture data.</p>
-                    </>
-                  )}
-                  {activeTab === 'history' && (
-                    <>
-                      <h2 className="page-heading">Pitch History & Score Comparison</h2>
-                      <p className="page-subheading">Track your progress across iterations and compare exact criteria deltas.</p>
-                    </>
-                  )}
-                  {activeTab === 'saved' && (
-                    <>
-                      <h2 className="page-heading">Saved Pitches</h2>
-                      <p className="page-subheading">Manage and revisit your previous pitch analyses.</p>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div className="header-actions">
-                {activeTab === 'results' && (
-                  <>
-                    <button className="secondary-action-btn" onClick={() => setShowReportModal(true)}>
-                      📥 Download PDF Report
-                    </button>
-                    <button className="primary-gradient-btn" onClick={handleSaveCurrentPitch}>
-                      💾 {saveSuccessMsg ? 'Saved! ✓' : 'Save Pitch'}
-                    </button>
-                  </>
-                )}
-
-                {activeTab === 'saved' && (
-                  <button className="primary-gradient-btn" onClick={() => setActiveTab('home')}>
-                    + New Analysis
-                  </button>
-                )}
-
-                {currentUser ? (
-                  <div className="nav-profile-badge" onClick={() => setUserDropdownOpen(!userDropdownOpen)}>
-                    <span className="avatar-circle">{currentUser.name.charAt(0).toUpperCase()}</span>
-                    <span className="profile-name">{currentUser.name.split(' ')[0]}</span>
-                    <span className="profile-chevron">▾</span>
-                  </div>
-                ) : (
-                  <button className="secondary-action-btn" onClick={() => setShowAuthModal(true)}>
-                    Sign In
-                  </button>
-                )}
-              </div>
-            </header>
-
-            {/* ══════════════════════════════════════════════════════════════
-                RESULTS VIEW (Pitch Analysis + Deck Structural Diagnostics)
-            ══════════════════════════════════════════════════════════════ */}
             {activeTab === 'results' && result && (
               <div className="results-content-stack">
 
@@ -1395,7 +1361,6 @@ export default function App() {
 
           </div>
         </div>
-      )}
 
       {/* ══════════════════════════════════════════════════════════════
           FEATURE 2: DOWNLOADABLE PITCH ANALYSIS REPORT MODAL (PDF)
