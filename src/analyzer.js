@@ -176,8 +176,8 @@ export function analyzePitch(text, pitchType = "Investor Pitch", audience = "Inv
       hasCTA ? "Clear Ask" : "No CTA"
     ],
     danger_tags: [
-      !hasProblem ? "No Problem Frame" : "Defensible Pain",
-      !hasFinancials ? "Zero Unit Economics" : "Margin Aware"
+      !hasProblem ? "Missing Problem Frame" : "Defensible Pain",
+      !hasFinancials ? "No Unit Economics" : "Margin Aware"
     ]
   };
 }
@@ -185,25 +185,25 @@ export function analyzePitch(text, pitchType = "Investor Pitch", audience = "Inv
 // Preset pitches for instant 1-click test demonstrations
 export const PRESET_PITCHES = [
   {
-    title: "🚀 Enterprise AI Startup",
+    title: "Enterprise B2B SaaS",
     type: "Investor Pitch",
     audience: "Investors",
     text: "Did you know enterprise sales teams waste 15 hours a week manually prepping discovery pitches? Hi, I'm Parth, founder of PitchIQ. We build an automated RAG-powered speech coaching platform that analyzes sales scripts against 200+ Shark Tank deals. We already have 1,400 active sales reps, $24,000 in monthly recurring revenue, and 78% gross margins. We are raising $250,000 for 10% equity to scale our enterprise pipeline. Join us today."
   },
   {
-    title: "🥤 Premium Himalayan Water",
-    type: "Product Demo",
+    title: "Consumer Beverage Brand",
+    type: "Sales Demo",
     audience: "Investors",
     text: "Hi, I'm Parth, founder of King Water company. We bring pure Himalayan spring water infused with natural gold dust to help athletes and busy professionals feel refreshed and maintain lasting energy throughout the day. Our water is naturally mineral-rich, providing unmatched purity and better health without any artificial chemicals. Try our first batch today and feel the difference."
   },
   {
-    title: "📦 Smart Hardware Gadget",
+    title: "Hardware Consumer IoT",
     type: "Shark Tank Pitch",
     audience: "Investors",
     text: "How many times have you lost your keys or phone right when you are running late for an important meeting? We invented KeyPulse, a Bluetooth rechargeable tracker that flashes and rings at 110 decibels through walls. We hold two utility patents, and it costs us $4 to manufacture and retails for $29 with an 86% margin. We have sold 8,000 units on Amazon. We are seeking $100,000 for 10% equity."
   },
   {
-    title: "⚠️ Unstructured Weak Pitch",
+    title: "Unstructured Early Draft",
     type: "Investor Pitch",
     audience: "Investors",
     text: "Our product is really amazing and has incredible goodness. We are the best team out there and our solution is completely unique and special in the market. Everyone who has seen it really likes it and we know you will love it too. It is revolutionary and disruptive."

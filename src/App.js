@@ -3,25 +3,26 @@ import { analyzePitch, PRESET_PITCHES } from './analyzer';
 import { SHARK_TANK_CORPUS } from './data/sharkTankCorpus';
 import './App.css';
 
-const PITCH_TYPES = ["Investor Pitch", "Shark Tank Pitch", "Sales Demo", "Interview"];
-const AUDIENCES   = ["Investors", "Enterprise", "SMB", "General"];
+const PITCH_TYPES = ["Investor Meeting", "Shark Tank Format", "Product Demo", "Interview"];
+const AUDIENCES   = ["Venture Capital", "Enterprise B2B", "Direct Consumer", "General"];
 
-function ScoreRing({ score, label = "Shark Investability" }) {
+function ScoreRing({ score, label = "Investability Score" }) {
   const r = 44;
   const circ = 2 * Math.PI * r;
   const dash = (score / 100) * circ;
-  const color = score >= 80 ? '#00FF9D' : score >= 60 ? '#FFB800' : '#FF4757';
   
   return (
     <div className="score-ring-wrap">
-      <svg width="112" height="112" viewBox="0 0 112 112">
-        <circle cx="56" cy="56" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6"/>
-        <circle cx="56" cy="56" r={r} fill="none" stroke={color} strokeWidth="6"
+      <svg width="108" height="108" viewBox="0 0 108 108" aria-hidden="true">
+        <circle cx="54" cy="54" r={r} fill="none" stroke="#1E293B" strokeWidth="6"/>
+        <circle 
+          cx="54" cy="54" r={r} fill="none" stroke="#2563EB" strokeWidth="6"
           strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-          style={{ transform: 'rotate(-90deg)', transformOrigin: '56px 56px', transition: 'stroke-dasharray 1s ease' }}/>
+          style={{ transform: 'rotate(-90deg)', transformOrigin: '54px 54px', transition: 'stroke-dasharray 0.8s ease' }}
+        />
       </svg>
       <div className="score-center">
-        <span className="score-val" style={{ color }}>{score}</span>
+        <span className="score-val">{score}</span>
         <span className="score-scale">/100</span>
       </div>
       <p className="score-caption">{label}</p>
@@ -29,30 +30,29 @@ function ScoreRing({ score, label = "Shark Investability" }) {
   );
 }
 
-function MetricProgressBar({ name, score }) {
-  const color = score >= 80 ? '#00FF9D' : score >= 60 ? '#FFB800' : '#FF4757';
+function MetricBar({ name, score }) {
   return (
-    <div className="metric-box">
+    <div className="metric-row">
       <div className="metric-head">
-        <span className="metric-title">{name}</span>
-        <span className="metric-num" style={{ color }}>{score}%</span>
+        <span className="metric-name">{name}</span>
+        <span className="metric-value">{score}%</span>
       </div>
-      <div className="progress-track">
-        <div className="progress-fill" style={{ width: `${score}%`, backgroundColor: color }} />
+      <div className="metric-track">
+        <div className="metric-fill" style={{ width: `${score}%` }} />
       </div>
     </div>
   );
 }
 
 export default function App() {
-  const [pitch, setPitch]             = useState('');
-  const [pitchType, setPType]         = useState('Shark Tank Pitch');
-  const [audience, setAudience]       = useState('Investors');
-  const [loading, setLoading]         = useState(false);
-  const [result, setResult]           = useState(null);
-  const [activeTab, setActiveTab]     = useState('scorecard');
+  const [pitch, setPitch]               = useState('');
+  const [pitchType, setPType]           = useState('Shark Tank Format');
+  const [audience, setAudience]         = useState('Venture Capital');
+  const [loading, setLoading]           = useState(false);
+  const [result, setResult]             = useState(null);
+  const [activeTab, setActiveTab]       = useState('scorecard');
   const [showCorpusModal, setShowModal] = useState(false);
-  const [copied, setCopied]           = useState(false);
+  const [copied, setCopied]             = useState(false);
 
   const wordCount = pitch.trim().split(/\s+/).filter(Boolean).length;
   const estimatedSeconds = Math.round((wordCount / 140) * 60);
@@ -65,7 +65,7 @@ export default function App() {
       setResult(analyzePitch(pitch, pitchType, audience));
       setLoading(false);
       setActiveTab('scorecard');
-    }, 1200);
+    }, 800);
   };
 
   const handleLoadPreset = (preset) => {
@@ -88,90 +88,72 @@ export default function App() {
   };
 
   return (
-    <div className="app-root">
-      {/* Background glow effects */}
-      <div className="ambient-grid" />
-      <div className="glow-sphere glow-left" />
-      <div className="glow-sphere glow-right" />
+    <div className="app-container">
+      {/* Navigation Header */}
+      <nav className="site-header">
+        <div className="header-inner">
+          <div className="brand-group">
+            <span className="brand-name">PitchIQ</span>
+            <span className="brand-badge">v2.0</span>
+          </div>
 
-      {/* Navigation */}
-      <nav className="top-nav">
-        <div className="nav-container">
-          <div className="nav-brand">
-            <div className="brand-logo">IQ</div>
-            <div className="brand-title">
-              Pitch<span>IQ</span>
-              <span className="rag-badge">RAG v2.0</span>
-            </div>
+          <div className="university-pill">
+            Silver Oak University &bull; Project ID: M2_CSE_027
           </div>
-          <div className="nav-center-badge">
-            <span className="dot-live" /> Silver Oak University • Project ID: M2_CSE_027
-          </div>
-          <div className="nav-actions">
-            <button className="nav-ghost-btn" onClick={() => setShowModal(true)}>
-              📚 Shark Tank Corpus ({SHARK_TANK_CORPUS.length})
+
+          <div className="header-links">
+            <button className="text-btn" onClick={() => setShowModal(true)}>
+              Deal Database ({SHARK_TANK_CORPUS.length})
             </button>
             <a 
               href="https://github.com/PARTHBAVALIYA/pitchiq" 
               target="_blank" 
               rel="noreferrer" 
-              className="nav-github-link"
+              className="text-btn external"
             >
-              GitHub ↗
+              GitHub &rarr;
             </a>
           </div>
         </div>
       </nav>
 
-      <main className="main-content">
+      {/* Main Container */}
+      <main className="content-wrap">
         {/* Hero Section */}
-        <header className="hero-banner">
-          <div className="hero-pill">
-            <span className="pill-spark">⚡</span> Case-Based Retrieval & Real-Time Pitch Intelligence
-          </div>
-          <h1 className="hero-headline">
-            Stop Getting Rejected.<br />
-            <span className="gradient-text">Pitch Like A Funded Founder.</span>
-          </h1>
-          <p className="hero-lead">
-            Evaluates your pitch script against <strong>200+ real Shark Tank & YC deals</strong>. 
-            Detect fatal weak points, benchmark against funded peers, and dynamic-rewrite your opening for maximum persuasion.
+        <header className="hero-section">
+          <span className="section-kicker">Case-Based Retrieval & Deal Benchmarking Engine</span>
+          <h1 className="hero-title">Empirical Pitch Analysis & Deal Benchmarking</h1>
+          <p className="hero-desc">
+            Evaluate your pitch against real-world venture capital precedents. PitchIQ identifies 
+            structural deficiencies, assesses investor investability, and generates an executive-grade revised script.
           </p>
 
-          <div className="stat-strip">
-            <div className="stat-item">
-              <span className="stat-number">200+</span>
-              <span className="stat-label">Shark Tank Deals Indexed</span>
+          <div className="metrics-strip">
+            <div className="strip-item">
+              <strong>200+</strong> <span>Historical Deals Indexed</span>
             </div>
-            <div className="stat-sep">•</div>
-            <div className="stat-item">
-              <span className="stat-number">6</span>
-              <span className="stat-label">Communication Metrics</span>
+            <div className="strip-dot">&bull;</div>
+            <div className="strip-item">
+              <strong>6-Factor</strong> <span>Deterministic Scoring</span>
             </div>
-            <div className="stat-sep">•</div>
-            <div className="stat-item">
-              <span className="stat-number">&lt; 1.6s</span>
-              <span className="stat-label">Client-Side RAG Latency</span>
-            </div>
-            <div className="stat-sep">•</div>
-            <div className="stat-item">
-              <span className="stat-number">100%</span>
-              <span className="stat-label">Zero-Cloud Privacy</span>
+            <div className="strip-dot">&bull;</div>
+            <div className="strip-item">
+              <strong>&lt; 1.2s</strong> <span>Client-Side RAG Latency</span>
             </div>
           </div>
         </header>
 
-        {/* Input Mode */}
+        {/* Input Form Panel */}
         {!result && !loading && (
-          <section className="input-panel">
+          <section className="input-section">
             {/* 1-Click Presets */}
-            <div className="presets-bar">
-              <span className="presets-label">⚡ 1-Click Test Scenarios:</span>
-              <div className="presets-chips">
+            <div className="preset-bar">
+              <span className="preset-label">Test Scenarios:</span>
+              <div className="preset-pills">
                 {PRESET_PITCHES.map((preset, idx) => (
                   <button 
                     key={idx} 
-                    className="preset-btn" 
+                    className="preset-pill-btn" 
                     onClick={() => handleLoadPreset(preset)}
                   >
                     {preset.title}
@@ -181,14 +163,15 @@ export default function App() {
             </div>
 
             {/* Selectors */}
-            <div className="config-grid">
-              <div className="config-card">
-                <label className="config-label">Presentation Scenario</label>
-                <div className="chips-row">
+            <div className="config-row">
+              <div className="config-block">
+                <label className="config-heading">Presentation Context</label>
+                <div className="segmented-control">
                   {PITCH_TYPES.map(t => (
                     <button
                       key={t}
-                      className={`chip-opt ${pitchType === t ? 'active' : ''}`}
+                      type="button"
+                      className={`segment-btn ${pitchType === t ? 'active' : ''}`}
                       onClick={() => setPType(t)}
                     >
                       {t}
@@ -197,13 +180,14 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="config-card">
-                <label className="config-label">Target Evaluation Mode</label>
-                <div className="chips-row">
+              <div className="config-block">
+                <label className="config-heading">Evaluation Audience</label>
+                <div className="segmented-control">
                   {AUDIENCES.map(a => (
                     <button
                       key={a}
-                      className={`chip-opt ${audience === a ? 'active' : ''}`}
+                      type="button"
+                      className={`segment-btn ${audience === a ? 'active' : ''}`}
                       onClick={() => setAudience(a)}
                     >
                       {a}
@@ -214,167 +198,166 @@ export default function App() {
             </div>
 
             {/* Editor Area */}
-            <div className="editor-card">
-              <div className="editor-toolbar">
-                <span className="editor-title">
-                  <span className="editor-dot" /> Pitch Script Input
-                </span>
-                <div className="editor-meta">
+            <div className="editor-container">
+              <div className="editor-header">
+                <span className="editor-label">Pitch Script Input</span>
+                <div className="editor-stats">
                   <span>{wordCount} words</span>
-                  <span className="meta-sep">|</span>
+                  <span className="stat-divider">&bull;</span>
                   <span>{pitch.length} chars</span>
-                  <span className="meta-sep">|</span>
-                  <span>~{estimatedSeconds}s spoken @ 140 WPM</span>
+                  <span className="stat-divider">&bull;</span>
+                  <span>~{estimatedSeconds}s spoken (@ 140 WPM)</span>
                 </div>
               </div>
 
               <textarea
-                className="pitch-textarea"
+                className="script-input"
                 rows={7}
-                placeholder="Paste or draft your pitch script here...&#10;&#10;Tip: Click any 1-Click Scenario above to test with pre-built Shark Tank level pitches!"
+                placeholder="Paste or write your pitch script here to analyze it against historical venture capital deals..."
                 value={pitch}
                 onChange={e => setPitch(e.target.value)}
               />
 
-              <div className="editor-footer">
-                <span className="min-char-hint">
-                  {pitch.trim().length < 25 ? "⚠️ Min 25 characters required to run RAG evaluation" : "✅ Script ready for Shark Tank evaluation"}
+              <div className="editor-actions">
+                <span className="validation-note">
+                  {pitch.trim().length < 25 
+                    ? "Minimum 25 characters required for analysis." 
+                    : "Script ready for evaluation."}
                 </span>
                 <button
-                  className="analyze-cta-btn"
+                  className="primary-btn"
                   onClick={handleAnalyze}
                   disabled={pitch.trim().length < 25}
                 >
-                  ⚡ Run Shark Tank RAG Analysis
+                  Analyze Pitch Script
                 </button>
               </div>
             </div>
           </section>
         )}
 
-        {/* Loading Animation */}
+        {/* Loading State */}
         {loading && (
-          <div className="loading-card">
-            <div className="radar-spinner">
-              <div className="radar-circle" />
-              <div className="radar-sweep" />
-            </div>
-            <h3 className="loading-title">Retrieving Shark Tank Knowledge Base...</h3>
-            <p className="loading-desc">
-              Matching your script against 200+ funded and rejected deals • Calculating metric indices • Synthesizing Shark feedback
+          <div className="loading-state">
+            <div className="spinner" />
+            <h3 className="loading-heading">Benchmarking Script Against Venture Capital Corpus</h3>
+            <p className="loading-subtext">
+              Matching script against historical funded and rejected deals &bull; Computing 6-factor investability metrics...
             </p>
           </div>
         )}
 
         {/* Results Dashboard */}
         {result && (
-          <section className="results-dashboard">
-            {/* Top Overview Card */}
-            <div className="hero-scorecard">
-              <div className="scorecard-left">
+          <section className="results-section">
+            {/* Overview Card */}
+            <div className="summary-card">
+              <div className="summary-ring">
                 <ScoreRing score={result.overall_score} label="Investability Score" />
               </div>
 
-              <div className="scorecard-center">
-                <div className="verdict-tag-row">
-                  <span className={`verdict-pill ${result.overall_score >= 80 ? 'green' : result.overall_score >= 60 ? 'yellow' : 'red'}`}>
+              <div className="summary-details">
+                <div className="verdict-line">
+                  <span className="verdict-tag">
                     {result.verdict.split(':')[0]}
                   </span>
-                  <span className="match-pill">
-                    🎯 RAG Top Match: {result.retrieved_case_studies.primary.name} ({result.retrieved_case_studies.primary.industry})
+                  <span className="benchmark-matched">
+                    Matched Precedent: {result.retrieved_case_studies.primary.name} ({result.retrieved_case_studies.primary.industry})
                   </span>
                 </div>
-                <h2 className="verdict-headline">{result.verdict}</h2>
-                <div className="tags-cluster">
+
+                <h2 className="verdict-title">{result.verdict}</h2>
+
+                <div className="tag-list">
                   {result.winning_tags.map(t => (
-                    <span key={t} className="feature-tag positive">✓ {t}</span>
+                    <span key={t} className="tag-item positive">{t}</span>
                   ))}
                   {result.danger_tags.map(t => (
-                    <span key={t} className="feature-tag warning">⚠️ {t}</span>
+                    <span key={t} className="tag-item cautionary">{t}</span>
                   ))}
                 </div>
               </div>
 
-              <div className="scorecard-right">
-                <button className="new-pitch-btn" onClick={handleReset}>
-                  ↩ Analyze New Pitch
+              <div className="summary-action">
+                <button className="secondary-btn" onClick={handleReset}>
+                  Analyze Another Pitch
                 </button>
               </div>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="tabs-nav">
+            {/* Tabs */}
+            <div className="tab-bar">
               <button 
-                className={`tab-btn ${activeTab === 'scorecard' ? 'active' : ''}`}
+                className={`tab-item ${activeTab === 'scorecard' ? 'active' : ''}`}
                 onClick={() => setActiveTab('scorecard')}
               >
-                📊 Score Breakdown
+                Score Breakdown
               </button>
               <button 
-                className={`tab-btn ${activeTab === 'rag_cases' ? 'active' : ''}`}
+                className={`tab-item ${activeTab === 'rag_cases' ? 'active' : ''}`}
                 onClick={() => setActiveTab('rag_cases')}
               >
-                🦈 Shark Tank Benchmarks (RAG)
+                Deal Benchmarks (RAG)
               </button>
               <button 
-                className={`tab-btn ${activeTab === 'sharks' ? 'active' : ''}`}
+                className={`tab-item ${activeTab === 'sharks' ? 'active' : ''}`}
                 onClick={() => setActiveTab('sharks')}
               >
-                💬 The Shark Panel
+                Investor Panel
               </button>
               <button 
-                className={`tab-btn ${activeTab === 'rewrite' ? 'active' : ''}`}
+                className={`tab-item ${activeTab === 'rewrite' ? 'active' : ''}`}
                 onClick={() => setActiveTab('rewrite')}
               >
-                ✍️ Shark-Grade Rewrite
+                Revised Script
               </button>
               <button 
-                className={`tab-btn ${activeTab === 'flaws' ? 'active' : ''}`}
+                className={`tab-item ${activeTab === 'flaws' ? 'active' : ''}`}
                 onClick={() => setActiveTab('flaws')}
               >
-                🚫 Fatal Weaknesses
+                Identified Deficiencies
               </button>
             </div>
 
             {/* Tab 1: Score Breakdown */}
             {activeTab === 'scorecard' && (
-              <div className="tab-pane metrics-pane">
+              <div className="tab-content">
                 <div className="metrics-grid">
                   {Object.entries(result.metrics).map(([name, score]) => (
-                    <MetricProgressBar key={name} name={name} score={score} />
+                    <MetricBar key={name} name={name} score={score} />
                   ))}
                 </div>
-                <div className="quick-recap-box">
-                  <h4>💡 Immediate Action Item</h4>
-                  <p>{result.improvements[0]}</p>
+                <div className="callout-card">
+                  <h4 className="callout-heading">Primary Recommendation</h4>
+                  <p className="callout-text">{result.improvements[0]}</p>
                 </div>
               </div>
             )}
 
-            {/* Tab 2: RAG Shark Tank Case Studies */}
+            {/* Tab 2: Deal Benchmarks */}
             {activeTab === 'rag_cases' && (
-              <div className="tab-pane cases-pane">
-                <div className="cases-split-grid">
+              <div className="tab-content">
+                <div className="dual-deal-grid">
                   {/* Funded Case */}
-                  <div className="case-card funded">
-                    <div className="case-header">
-                      <span className="case-outcome-badge funded">✅ FUNDED DEAL BENCHMARK</span>
-                      <span className="case-season">{result.retrieved_case_studies.funded_benchmark.season}</span>
+                  <div className="deal-card funded">
+                    <div className="deal-status-bar">
+                      <span className="deal-status-label funded">Funded Deal Benchmark</span>
+                      <span className="deal-season">{result.retrieved_case_studies.funded_benchmark.season}</span>
                     </div>
-                    <h3 className="case-name">{result.retrieved_case_studies.funded_benchmark.name}</h3>
-                    <p className="case-valuation">
-                      Deal: <strong>{result.retrieved_case_studies.funded_benchmark.ask}</strong> • Investor: <strong>{result.retrieved_case_studies.funded_benchmark.investor}</strong>
+                    <h3 className="deal-title">{result.retrieved_case_studies.funded_benchmark.name}</h3>
+                    <p className="deal-meta">
+                      Deal: <strong>{result.retrieved_case_studies.funded_benchmark.ask}</strong> &bull; Investor: <strong>{result.retrieved_case_studies.funded_benchmark.investor}</strong>
                     </p>
-                    <p className="case-summary">{result.retrieved_case_studies.funded_benchmark.summary}</p>
+                    <p className="deal-desc">{result.retrieved_case_studies.funded_benchmark.summary}</p>
 
-                    <div className="case-hook-box">
-                      <span className="subhead">Winning Hook Formula:</span>
-                      <p>"{result.retrieved_case_studies.funded_benchmark.hook}"</p>
+                    <div className="deal-section-block">
+                      <span className="block-label">Winning Hook Formula:</span>
+                      <p className="block-quote">&ldquo;{result.retrieved_case_studies.funded_benchmark.hook}&rdquo;</p>
                     </div>
 
-                    <div className="case-strengths">
-                      <span className="subhead">Why The Sharks Invested:</span>
-                      <ul>
+                    <div className="deal-section-block">
+                      <span className="block-label">Key Drivers for Funding:</span>
+                      <ul className="bullet-list">
                         {result.retrieved_case_studies.funded_benchmark.strengths.map((s, i) => (
                           <li key={i}>{s}</li>
                         ))}
@@ -383,25 +366,25 @@ export default function App() {
                   </div>
 
                   {/* Rejected Case */}
-                  <div className="case-card rejected">
-                    <div className="case-header">
-                      <span className="case-outcome-badge rejected">❌ REJECTED DEAL COMPARISON</span>
-                      <span className="case-season">{result.retrieved_case_studies.rejected_benchmark.season}</span>
+                  <div className="deal-card rejected">
+                    <div className="deal-status-bar">
+                      <span className="deal-status-label rejected">Rejected Deal Precedent</span>
+                      <span className="deal-season">{result.retrieved_case_studies.rejected_benchmark.season}</span>
                     </div>
-                    <h3 className="case-name">{result.retrieved_case_studies.rejected_benchmark.name}</h3>
-                    <p className="case-valuation">
-                      Asked: <strong>{result.retrieved_case_studies.rejected_benchmark.ask}</strong> • Outcome: <strong>All Sharks Passed</strong>
+                    <h3 className="deal-title">{result.retrieved_case_studies.rejected_benchmark.name}</h3>
+                    <p className="deal-meta">
+                      Ask: <strong>{result.retrieved_case_studies.rejected_benchmark.ask}</strong> &bull; Result: <strong>All Investors Passed</strong>
                     </p>
-                    <p className="case-summary">{result.retrieved_case_studies.rejected_benchmark.summary}</p>
+                    <p className="deal-desc">{result.retrieved_case_studies.rejected_benchmark.summary}</p>
 
-                    <div className="case-hook-box rejected-hook">
-                      <span className="subhead">Why Sharks Said "I'm Out":</span>
-                      <p>{result.retrieved_case_studies.rejected_benchmark.sharkFeedback}</p>
+                    <div className="deal-section-block">
+                      <span className="block-label">Investor Post-Mortem:</span>
+                      <p className="block-quote">&ldquo;{result.retrieved_case_studies.rejected_benchmark.sharkFeedback}&rdquo;</p>
                     </div>
 
-                    <div className="case-strengths">
-                      <span className="subhead">Fatal Pitch Flaws To Avoid:</span>
-                      <ul>
+                    <div className="deal-section-block">
+                      <span className="block-label">Fatal Flaws Flagged:</span>
+                      <ul className="bullet-list">
                         {result.retrieved_case_studies.rejected_benchmark.weaknessesFlagged.map((w, i) => (
                           <li key={i}>{w}</li>
                         ))}
@@ -412,127 +395,174 @@ export default function App() {
               </div>
             )}
 
-            {/* Tab 3: Shark Panel Personas */}
+            {/* Tab 3: Investor Panel */}
             {activeTab === 'sharks' && (
-              <div className="tab-pane sharks-pane">
-                <div className="sharks-grid">
+              <div className="tab-content">
+                <div className="panel-grid">
                   {result.shark_reactions.map((shark, idx) => (
-                    <div key={idx} className="shark-card">
-                      <div className="shark-avatar-wrap">
-                        <span className="shark-icon">{shark.avatar}</span>
+                    <div key={idx} className="panel-card">
+                      <div className="panel-header">
+                        <span className="panel-badge">{shark.archetype.split(' ')[0]}</span>
                         <div>
-                          <h4 className="shark-name">{shark.name}</h4>
-                          <span className="shark-sub">{shark.archetype} • Focus: {shark.focus}</span>
+                          <h4 className="panel-title">{shark.name}</h4>
+                          <span className="panel-subtitle">{shark.archetype} &bull; {shark.focus}</span>
                         </div>
                       </div>
-                      <blockquote className="shark-quote">
-                        "{shark.feedback}"
-                      </blockquote>
+                      <div className="panel-critique">
+                        &ldquo;{shark.critique}&rdquo;
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Tab 4: Shark-Grade Rewrite */}
+            {/* Tab 4: Rewritten Script */}
             {activeTab === 'rewrite' && (
-              <div className="tab-pane rewrite-pane">
-                <div className="rewrite-banner">
+              <div className="tab-content">
+                <div className="rewrite-card">
                   <div className="rewrite-header">
-                    <h3>✍️ Shark-Grade 5-Part Script Rewrite</h3>
-                    <button className="copy-btn" onClick={handleCopyRewrite}>
-                      {copied ? "✓ Copied to Clipboard!" : "📋 Copy Full Script"}
+                    <div>
+                      <h3 className="rewrite-title">5-Stage Executive Script Synthesis</h3>
+                      <p className="rewrite-subtitle">
+                        Structured according to venture capital standards, drawing from top-performing deal formulas.
+                      </p>
+                    </div>
+                    <button className="primary-btn sm" onClick={handleCopyRewrite}>
+                      {copied ? "Copied" : "Copy Script"}
                     </button>
                   </div>
-                  <p className="rewrite-sub">
-                    Re-engineered using the 5-part Shark Tank conversion framework: 
-                    <em> [Hook Question] ➔ [Universal Problem] ➔ [Proprietary Solution] ➔ [Unit Economics] ➔ [Clear Ask]</em>
-                  </p>
-                  <div className="rewrite-script-box">
-                    {result.rewritten_opening}
+
+                  <div className="script-box">
+                    <pre className="script-text">{result.rewritten_opening}</pre>
+                  </div>
+
+                  <div className="stages-grid">
+                    <div className="stage-item">
+                      <span className="stage-num">01</span>
+                      <div>
+                        <strong>5-Second Hook</strong>
+                        <p>Opens with a clear, quantified pain point or provocative question.</p>
+                      </div>
+                    </div>
+                    <div className="stage-item">
+                      <span className="stage-num">02</span>
+                      <div>
+                        <strong>Problem Quantification</strong>
+                        <p>Articulates the market inefficiency in tangible metrics.</p>
+                      </div>
+                    </div>
+                    <div className="stage-item">
+                      <span className="stage-num">03</span>
+                      <div>
+                        <strong>Engineered Solution</strong>
+                        <p>States the exact mechanism of action without excessive jargon.</p>
+                      </div>
+                    </div>
+                    <div className="stage-item">
+                      <span className="stage-num">04</span>
+                      <div>
+                        <strong>Traction &amp; Unit Economics</strong>
+                        <p>Validates unit margins, customer demand, and growth momentum.</p>
+                      </div>
+                    </div>
+                    <div className="stage-item">
+                      <span className="stage-num">05</span>
+                      <div>
+                        <strong>Unambiguous Ask</strong>
+                        <p>Concludes with a definitive capital ask or pilot trial close.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Tab 5: Fatal Weaknesses & Roadmap */}
+            {/* Tab 5: Identified Deficiencies */}
             {activeTab === 'flaws' && (
-              <div className="tab-pane flaws-pane">
-                <div className="flaws-grid">
-                  <div className="flaw-box critical">
-                    <h4>🚫 Fatal Mistakes (Why Sharks Say "I'm Out")</h4>
-                    {result.mistakes.map((m, i) => (
-                      <div key={i} className="flaw-item error">
-                        <span className="flaw-bullet">•</span>
-                        <span>{m}</span>
-                      </div>
-                    ))}
+              <div className="tab-content">
+                <div className="deficiency-grid">
+                  <div className="deficiency-card">
+                    <h4 className="deficiency-title">Identified Vulnerabilities</h4>
+                    <ul className="deficiency-list">
+                      {result.mistakes.map((m, i) => (
+                        <li key={i}>{m}</li>
+                      ))}
+                    </ul>
                   </div>
 
-                  <div className="flaw-box improvement">
-                    <h4>💡 Actionable Roadmap to Get Funded</h4>
-                    {result.improvements.map((imp, i) => (
-                      <div key={i} className="flaw-item success">
-                        <span className="flaw-bullet">✓</span>
-                        <span>{imp}</span>
-                      </div>
-                    ))}
+                  <div className="deficiency-card">
+                    <h4 className="deficiency-title">Prescribed Action Steps</h4>
+                    <ul className="deficiency-list action">
+                      {result.improvements.map((imp, i) => (
+                        <li key={i}>{imp}</li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
               </div>
             )}
-
-            <div className="bottom-bar-actions">
-              <button className="analyze-cta-btn secondary" onClick={handleReset}>
-                Analyze Another Script
-              </button>
-            </div>
           </section>
-        )}
-
-        {/* Modal: Knowledge Base Explorer */}
-        {showCorpusModal && (
-          <div className="modal-backdrop" onClick={() => setShowModal(false)}>
-            <div className="modal-window" onClick={e => e.stopPropagation()}>
-              <div className="modal-header">
-                <div>
-                  <h3 className="modal-title">📚 PitchIQ Shark Tank Knowledge Base</h3>
-                  <p className="modal-sub">Indexed deal corpus used by the RAG retrieval engine</p>
-                </div>
-                <button className="modal-close-btn" onClick={() => setShowModal(false)}>✕</button>
-              </div>
-
-              <div className="corpus-list">
-                {SHARK_TANK_CORPUS.map(c => (
-                  <div key={c.id} className="corpus-row">
-                    <div className="corpus-col-left">
-                      <span className={`badge-pill ${c.outcome === 'Funded' ? 'funded' : 'rejected'}`}>
-                        {c.outcome}
-                      </span>
-                      <h4 className="corpus-name">{c.name}</h4>
-                      <span className="corpus-meta">{c.season} • {c.industry}</span>
-                    </div>
-                    <div className="corpus-col-mid">
-                      <p className="corpus-desc">{c.summary}</p>
-                      <span className="corpus-hook"><strong>Hook:</strong> "{c.hook}"</span>
-                    </div>
-                    <div className="corpus-col-right">
-                      <span className="corpus-ask">Ask: {c.ask}</span>
-                      <span className="corpus-investor">Partner: {c.investor}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         )}
       </main>
 
-      <footer className="footer-bar">
-        <div className="footer-content">
-          <span>PitchIQ v2.0 • AI Pitch & Communication Intelligence</span>
-          <span>Silver Oak University • Department of Computer Engineering • Project ID: M2_CSE_027</span>
-          <span>Engineered by Parth Bavalliya, Harsh Varatiya, Akshat Solanki</span>
+      {/* Modal: Deal Database */}
+      {showCorpusModal && (
+        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Venture Capital &amp; Shark Tank Corpus</h3>
+                <p className="modal-subtitle">Curated deal precedents indexed for Case-Based Retrieval (RAG)</p>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowModal(false)}>&times;</button>
+            </div>
+
+            <div className="modal-body">
+              <div className="table-responsive">
+                <table className="corpus-table">
+                  <thead>
+                    <tr>
+                      <th>Company</th>
+                      <th>Industry</th>
+                      <th>Deal Terms</th>
+                      <th>Outcome</th>
+                      <th>Key Lesson</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {SHARK_TANK_CORPUS.map(c => (
+                      <tr key={c.id}>
+                        <td className="bold">{c.name}</td>
+                        <td>{c.industry}</td>
+                        <td>{c.ask}</td>
+                        <td>
+                          <span className={`status-pill ${c.outcome === 'Funded' ? 'funded' : 'rejected'}`}>
+                            {c.outcome}
+                          </span>
+                        </td>
+                        <td className="small-text">
+                          {c.outcome === 'Funded' ? c.strengths[0] : c.weaknessesFlagged[0]}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="secondary-btn" onClick={() => setShowModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer className="site-footer">
+        <div className="footer-inner">
+          <span>PitchIQ v2.0 &bull; Project ID: M2_CSE_027 &bull; Department of Computer Engineering, Silver Oak University</span>
+          <span>Deployed on Vercel Edge Serverless</span>
         </div>
       </footer>
     </div>
