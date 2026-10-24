@@ -1259,13 +1259,6 @@ export default function App() {
                       Analysed ({savedPitches.filter(p => p.status === 'Analysed').length})
                     </button>
                   </div>
-
-                  <button
-                    className="dashboard-back-btn"
-                    onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                  >
-                    ← Back to Pitch
-                  </button>
                 </div>
 
                 {filteredSavedPitches.length === 0 ? (
