@@ -12,6 +12,7 @@ import {
   dbSaveHistoryAttempt,
   dbClearHistory
 } from './userDatabase';
+import AuthCard from './components/AuthCard';
 import './App.css';
 
 export default function App() {
@@ -30,9 +31,14 @@ export default function App() {
   const [authMode, setAuthMode] = useState('signup'); // starts with sign up page
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
   const [authName, setAuthName] = useState('');
   const [authError, setAuthError] = useState('');
+  const [authFieldErrors, setAuthFieldErrors] = useState({}); // per-field inline errors
   const [authLoading, setAuthLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [authSuccess, setAuthSuccess] = useState('');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   // Input Mode: 'text' or 'pdf'
@@ -112,41 +118,99 @@ export default function App() {
 
   const wordCount = pitch.trim().split(/\s+/).filter(Boolean).length;
 
+  // ── Auth Validation Helpers ──
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const PASSWORD_MIN = 6;
+
+  function getPasswordStrength(pw) {
+    if (!pw) return { score: 0, label: '', color: '' };
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    const levels = [
+      { score: 0, label: '', color: '' },
+      { score: 1, label: 'Weak', color: '#ef4444' },
+      { score: 2, label: 'Fair', color: '#f97316' },
+      { score: 3, label: 'Good', color: '#eab308' },
+      { score: 4, label: 'Strong', color: '#22c55e' },
+    ];
+    return levels[score] || levels[4];
+  }
+
+  function validateAuthFields() {
+    const errs = {};
+    if (authMode === 'signup') {
+      if (!authName.trim()) errs.name = 'Full name is required.';
+      else if (authName.trim().length < 2) errs.name = 'Name must be at least 2 characters.';
+    }
+    if (!authEmail.trim()) errs.email = 'Email address is required.';
+    else if (!EMAIL_REGEX.test(authEmail.trim())) errs.email = 'Please enter a valid email address.';
+    if (!authPassword) errs.password = 'Password is required.';
+    else if (authPassword.length < PASSWORD_MIN) errs.password = `Password must be at least ${PASSWORD_MIN} characters.`;
+    if (authMode === 'signup') {
+      if (!authConfirmPassword) errs.confirm = 'Please confirm your password.';
+      else if (authPassword !== authConfirmPassword) errs.confirm = 'Passwords do not match.';
+    }
+    return errs;
+  }
+
   // ── Working Database Authentication Handlers ──
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
-    if (!authEmail.trim() || !authPassword) {
-      setAuthError('Please enter both email and password.');
+    setAuthSuccess('');
+
+    // Run full field validation first
+    const errs = validateAuthFields();
+    if (Object.keys(errs).length > 0) {
+      setAuthFieldErrors(errs);
       return;
     }
+    setAuthFieldErrors({});
 
     setAuthLoading(true);
     try {
       let user;
       if (authMode === 'signup') {
-        if (!authName.trim()) {
-          setAuthError('Please enter your full name.');
-          setAuthLoading(false);
-          return;
-        }
-        user = await dbRegisterUser(authName, authEmail, authPassword);
+        user = await dbRegisterUser(authName.trim(), authEmail.trim(), authPassword);
+        setAuthSuccess('Account created successfully! Welcome to PitchIQ 🎉');
       } else {
-        user = await dbAuthenticateUser(authEmail, authPassword);
+        user = await dbAuthenticateUser(authEmail.trim(), authPassword);
+        setAuthSuccess(`Welcome back, ${user.name}! 👋`);
       }
+
+      // Short delay to show success message then log in
+      await new Promise(r => setTimeout(r, 800));
 
       setCurrentUser(user);
       localStorage.setItem('pitchiq_auth_user', JSON.stringify(user));
       setShowAuthModal(false);
       setAuthEmail('');
       setAuthPassword('');
+      setAuthConfirmPassword('');
       setAuthName('');
       setAuthError('');
+      setAuthSuccess('');
+      setAuthFieldErrors({});
     } catch (err) {
-      setAuthError(err.message || 'Authentication error.');
+      setAuthError(err.message || 'Authentication error. Please try again.');
     } finally {
       setAuthLoading(false);
     }
+  };
+
+  const resetAuthState = () => {
+    setAuthEmail('');
+    setAuthPassword('');
+    setAuthConfirmPassword('');
+    setAuthName('');
+    setAuthError('');
+    setAuthSuccess('');
+    setAuthFieldErrors({});
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleLogout = () => {
@@ -320,83 +384,31 @@ export default function App() {
             AI-Powered Pitch Intelligence &bull; Venture Benchmark Engine
           </p>
 
-          <div className="auth-card-modal standalone">
-            <div className="auth-mode-toggle">
-              <button
-                type="button"
-                className={`auth-toggle-tab ${authMode === 'signup' ? 'active' : ''}`}
-                onClick={() => { setAuthMode('signup'); setAuthError(''); }}
-              >
-                Sign Up
-              </button>
-              <button
-                type="button"
-                className={`auth-toggle-tab ${authMode === 'login' ? 'active' : ''}`}
-                onClick={() => { setAuthMode('login'); setAuthError(''); }}
-              >
-                Sign In
-              </button>
-            </div>
-
-            <h3 className="auth-title">
-              {authMode === 'signup' ? 'Create Your PitchIQ Account' : 'Welcome Back to PitchIQ'}
-            </h3>
-            <p className="auth-sub">
-              {authMode === 'signup'
-                ? 'Get instant, AI-powered pitch script & slide deck evaluations backed by 200+ venture deals.'
-                : 'Sign in to access your saved pitches, revision progression, and venture benchmarks.'}
-            </p>
-
-            <form onSubmit={handleAuthSubmit} className="auth-form">
-              {authMode === 'signup' && (
-                <div className="form-group">
-                  <label>Full Name</label>
-                  <input
-                    type="text"
-                    className="auth-input"
-                    placeholder="e.g. Parth Bavalliya"
-                    value={authName}
-                    onChange={(e) => setAuthName(e.target.value)}
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="form-group">
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  className="auth-input"
-                  placeholder="name@company.com"
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Password</label>
-                <input
-                  type="password"
-                  className="auth-input"
-                  placeholder="••••••••"
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              {authError && (
-                <div className="auth-error-banner">
-                  ⚠️ {authError}
-                </div>
-              )}
-
-              <button type="submit" className="auth-submit-btn" disabled={authLoading}>
-                {authLoading ? 'Processing...' : authMode === 'signup' ? 'Create Account' : 'Sign In'}
-              </button>
-            </form>
-          </div>
+          <AuthCard
+            authMode={authMode}
+            setAuthMode={setAuthMode}
+            authName={authName}
+            setAuthName={setAuthName}
+            authEmail={authEmail}
+            setAuthEmail={setAuthEmail}
+            authPassword={authPassword}
+            setAuthPassword={setAuthPassword}
+            authConfirmPassword={authConfirmPassword}
+            setAuthConfirmPassword={setAuthConfirmPassword}
+            authFieldErrors={authFieldErrors}
+            setAuthFieldErrors={setAuthFieldErrors}
+            authError={authError}
+            setAuthError={setAuthError}
+            authSuccess={authSuccess}
+            authLoading={authLoading}
+            showPassword={showPassword}
+            setShowPassword={setShowPassword}
+            showConfirmPassword={showConfirmPassword}
+            setShowConfirmPassword={setShowConfirmPassword}
+            getPasswordStrength={getPasswordStrength}
+            handleAuthSubmit={handleAuthSubmit}
+            isStandalone={true}
+          />
 
           <footer className="auth-page-footer">
             <span>PitchIQ &bull; Backed by real venture capital criteria & startup case studies</span>
@@ -1490,88 +1502,31 @@ export default function App() {
       ══════════════════════════════════════════════════════════════ */}
       {showAuthModal && (
         <div className="overlay-backdrop" onClick={() => setShowAuthModal(false)}>
-          <div className="auth-card-modal" onClick={e => e.stopPropagation()}>
-            <div className="auth-modal-header">
-              <span className="modal-brand">PitchIQ</span>
-              <button type="button" className="modal-close-cross" onClick={() => setShowAuthModal(false)}>
-                &times;
-              </button>
-            </div>
-
-            <div className="auth-mode-toggle">
-              <button
-                type="button"
-                className={`auth-toggle-tab ${authMode === 'login' ? 'active' : ''}`}
-                onClick={() => { setAuthMode('login'); setAuthError(''); }}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                className={`auth-toggle-tab ${authMode === 'signup' ? 'active' : ''}`}
-                onClick={() => { setAuthMode('signup'); setAuthError(''); }}
-              >
-                Create Account
-              </button>
-            </div>
-
-            <h3 className="auth-title">
-              {authMode === 'login' ? 'Welcome Back to PitchIQ' : 'Create Your PitchIQ Account'}
-            </h3>
-            <p className="auth-sub">
-              Access your saved pitches, revision history, and case-grounded venture analytics.
-            </p>
-
-            <form onSubmit={handleAuthSubmit} className="auth-form">
-              {authMode === 'signup' && (
-                <div className="form-group">
-                  <label>Full Name</label>
-                  <input
-                    type="text"
-                    className="auth-input"
-                    placeholder="e.g. Parth Bavalliya"
-                    value={authName}
-                    onChange={(e) => setAuthName(e.target.value)}
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="form-group">
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  className="auth-input"
-                  placeholder="name@company.com"
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Password</label>
-                <input
-                  type="password"
-                  className="auth-input"
-                  placeholder="••••••••"
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              {authError && (
-                <div className="auth-error-banner">
-                  ⚠️ {authError}
-                </div>
-              )}
-
-              <button type="submit" className="auth-submit-btn" disabled={authLoading}>
-                {authLoading ? 'Processing...' : authMode === 'login' ? 'Sign In' : 'Create Account'}
-              </button>
-            </form>
-          </div>
+          <AuthCard
+            authMode={authMode}
+            setAuthMode={setAuthMode}
+            authName={authName}
+            setAuthName={setAuthName}
+            authEmail={authEmail}
+            setAuthEmail={setAuthEmail}
+            authPassword={authPassword}
+            setAuthPassword={setAuthPassword}
+            authConfirmPassword={authConfirmPassword}
+            setAuthConfirmPassword={setAuthConfirmPassword}
+            authFieldErrors={authFieldErrors}
+            setAuthFieldErrors={setAuthFieldErrors}
+            authError={authError}
+            setAuthError={setAuthError}
+            authSuccess={authSuccess}
+            authLoading={authLoading}
+            showPassword={showPassword}
+            setShowPassword={setShowPassword}
+            showConfirmPassword={showConfirmPassword}
+            setShowConfirmPassword={setShowConfirmPassword}
+            getPasswordStrength={getPasswordStrength}
+            handleAuthSubmit={handleAuthSubmit}
+            onClose={() => setShowAuthModal(false)}
+          />
         </div>
       )}
 

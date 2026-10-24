@@ -23,3 +23,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+
+# office temp & secrets
+~$*
+*.pickle
+client_secrets.json
+credentials.json

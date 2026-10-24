@@ -158,26 +158,40 @@ function runStoreTx(storeName, mode, callback) {
 // USER REGISTRATION & AUTHENTICATION
 // ─────────────────────────────────────────────────────────────
 
+const EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 /**
  * Register a new user in the database
  */
 export async function dbRegisterUser(name, email, password) {
-  const cleanEmail = email.trim().toLowerCase();
-  const cleanName = name.trim();
+  const cleanEmail = (email || '').trim().toLowerCase();
+  const cleanName = (name || '').trim();
 
-  if (!cleanEmail || !password) {
-    throw new Error('Email and password are required.');
+  if (!cleanName || cleanName.length < 2) {
+    throw new Error('Please enter a valid full name (at least 2 characters).');
+  }
+
+  if (!cleanEmail) {
+    throw new Error('Email address is required.');
+  }
+
+  if (!EMAIL_FORMAT_REGEX.test(cleanEmail)) {
+    throw new Error('Please enter a valid email address (e.g. founder@domain.com).');
+  }
+
+  if (!password || password.length < 6) {
+    throw new Error('Password must be at least 6 characters long.');
   }
 
   // Check if user already exists
   const existing = await dbGetUserByEmail(cleanEmail);
   if (existing) {
-    throw new Error('An account with this email already exists. Please Sign In.');
+    throw new Error('An account with this email already exists. Please Sign In instead.');
   }
 
   const newUser = {
     id: `usr_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-    name: cleanName || cleanEmail.split('@')[0],
+    name: cleanName,
     email: cleanEmail,
     password: password, // In production this would be bcrypt-hashed
     createdAt: new Date().toISOString(),
@@ -204,15 +218,27 @@ export async function dbRegisterUser(name, email, password) {
  * Authenticate existing user by email and password
  */
 export async function dbAuthenticateUser(email, password) {
-  const cleanEmail = email.trim().toLowerCase();
+  const cleanEmail = (email || '').trim().toLowerCase();
+
+  if (!cleanEmail) {
+    throw new Error('Please enter your email address.');
+  }
+
+  if (!EMAIL_FORMAT_REGEX.test(cleanEmail)) {
+    throw new Error('Please enter a valid email address.');
+  }
+
+  if (!password) {
+    throw new Error('Please enter your password.');
+  }
 
   const user = await dbGetUserByEmail(cleanEmail);
   if (!user) {
-    throw new Error('No account found with this email. Please create an account.');
+    throw new Error('No account found with this email. Please check your spelling or click Sign Up.');
   }
 
   if (user.password !== password) {
-    throw new Error('Incorrect password. Please try again.');
+    throw new Error('Incorrect password. Please verify and try again.');
   }
 
   // Update last login
