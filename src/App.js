@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { analyzePitch, PRESET_PITCHES } from './analyzer';
+import { analyzePitch } from './analyzer';
 import { extractTextFromPDF, analyzePitchDeck } from './pdfDeckAnalyzer';
 import {
   openDatabase,
@@ -43,8 +43,8 @@ export default function App() {
 
   // Input Mode: 'text' or 'pdf'
   const [inputMode, setInputMode] = useState('text'); // 'text' | 'pdf'
-  const [pitch, setPitch] = useState(PRESET_PITCHES[0].text);
-  const [selectedPreset, setSelectedPreset] = useState(0);
+  const [pitch, setPitch] = useState('');
+
 
   // PDF Deck Upload State
   const [pdfFile, setPdfFile] = useState(null);
@@ -52,7 +52,7 @@ export default function App() {
   const [deckAnalysis, setDeckAnalysis] = useState(null);
 
   // Analysis Result & History
-  const [result, setResult] = useState(() => analyzePitch(PRESET_PITCHES[0].text, 'Investor Pitch', 'Investors'));
+  const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -287,15 +287,7 @@ export default function App() {
     }, 700);
   };
 
-  const handlePresetSelect = (preset, index) => {
-    setSelectedPreset(index);
-    setPitch(preset.text);
-    setInputMode('text');
-    setDeckAnalysis(null);
-    setPdfFile(null);
-  };
-
-  const handleCopyRewrite = () => {
+const handleCopyRewrite = () => {
     if (!result?.rewritten_opening) return;
     navigator.clipboard.writeText(result.rewritten_opening);
     setCopied(true);
@@ -655,34 +647,28 @@ export default function App() {
 
               {/* Mode 1: Text Script */}
               {inputMode === 'text' && (
-                <>
-                  <div className="sample-chips-row">
-                    <span className="sample-label">Try a sample:</span>
-                    <div className="chips-group">
-                      {PRESET_PITCHES.map((preset, idx) => (
-                        <button
-                          key={preset.title}
-                          className={`sample-chip ${selectedPreset === idx ? 'selected' : ''}`}
-                          onClick={() => handlePresetSelect(preset, idx)}
-                        >
-                          {preset.title}
-                        </button>
-                      ))}
+                <div className="textarea-container">
+                  <textarea
+                    className="hero-textarea"
+                    value={pitch}
+                    onChange={(e) => setPitch(e.target.value)}
+                    placeholder="Type or paste your startup pitch here (e.g. problem, target customer, solution, unit economics, traction, and funding ask)..."
+                    rows={7}
+                  />
+                  {pitch && (
+                    <div className="textarea-footer-actions">
+                      <button
+                        type="button"
+                        className="clear-pitch-btn"
+                        onClick={() => setPitch('')}
+                        title="Clear all text"
+                      >
+                        ✕ Clear Text
+                      </button>
                     </div>
-                  </div>
-
-                  <div className="textarea-container">
-                    <textarea
-                      className="hero-textarea"
-                      value={pitch}
-                      onChange={(e) => setPitch(e.target.value)}
-                      placeholder="Paste your pitch here (e.g. problem, solution, unit economics, traction, and funding ask)..."
-                      rows={6}
-                    />
-                  </div>
-                </>
+                  )}
+                </div>
               )}
-
               {/* Mode 2: PDF Pitch Deck Upload */}
               {inputMode === 'pdf' && (
                 <div className="pdf-upload-container">
@@ -1008,6 +994,23 @@ export default function App() {
                   </div>
                 </div>
 
+              </div>
+            )}
+
+                        {/* Empty state when Results tab is opened but no pitch analyzed yet */}
+            {activeTab === 'results' && !result && (
+              <div className="empty-saved-state">
+                <div className="empty-icon-circle">📊</div>
+                <h3 className="empty-title">No Pitch Analyzed Yet</h3>
+                <p className="empty-desc">
+                  Write or paste your startup pitch script, or upload a pitch deck PDF in the Pitch Input studio to generate your VC diagnostic score.
+                </p>
+                <button
+                  className="empty-cta-btn"
+                  onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                >
+                  + Go to Pitch Input
+                </button>
               </div>
             )}
 

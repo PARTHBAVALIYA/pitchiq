@@ -562,6 +562,30 @@ button {
   font-size: 13.5px;
 }
 
+.textarea-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 10px 8px;
+}
+
+.clear-pitch-btn {
+  background: transparent;
+  border: 1px solid var(--border-light);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clear-pitch-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
 /* PDF Upload Dropzone */
 .pdf-upload-container {
   display: flex;
