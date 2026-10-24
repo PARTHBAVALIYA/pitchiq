@@ -323,14 +323,16 @@ export default function App() {
           <div className="auth-card-modal standalone">
             <div className="auth-mode-toggle">
               <button
+                type="button"
                 className={`auth-toggle-tab ${authMode === 'signup' ? 'active' : ''}`}
-                onClick={() => setAuthMode('signup')}
+                onClick={() => { setAuthMode('signup'); setAuthError(''); }}
               >
                 Sign Up
               </button>
               <button
+                type="button"
                 className={`auth-toggle-tab ${authMode === 'login' ? 'active' : ''}`}
-                onClick={() => setAuthMode('login')}
+                onClick={() => { setAuthMode('login'); setAuthError(''); }}
               >
                 Sign In
               </button>
@@ -1491,21 +1493,23 @@ export default function App() {
           <div className="auth-card-modal" onClick={e => e.stopPropagation()}>
             <div className="auth-modal-header">
               <span className="modal-brand">PitchIQ</span>
-              <button className="modal-close-cross" onClick={() => setShowAuthModal(false)}>
+              <button type="button" className="modal-close-cross" onClick={() => setShowAuthModal(false)}>
                 &times;
               </button>
             </div>
 
             <div className="auth-mode-toggle">
               <button
+                type="button"
                 className={`auth-toggle-tab ${authMode === 'login' ? 'active' : ''}`}
-                onClick={() => setAuthMode('login')}
+                onClick={() => { setAuthMode('login'); setAuthError(''); }}
               >
                 Sign In
               </button>
               <button
+                type="button"
                 className={`auth-toggle-tab ${authMode === 'signup' ? 'active' : ''}`}
-                onClick={() => setAuthMode('signup')}
+                onClick={() => { setAuthMode('signup'); setAuthError(''); }}
               >
                 Create Account
               </button>
