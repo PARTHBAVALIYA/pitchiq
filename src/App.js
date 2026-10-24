@@ -460,21 +460,6 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Upgrade to Pro Card */}
-          <div className="sidebar-pro-card">
-            <div className="pro-card-header">
-              <span className="pro-crown">👑</span>
-              <strong className="pro-title">Upgrade to Pro</strong>
-            </div>
-            <ul className="pro-features">
-              <li>✓ Unlimited analyses</li>
-              <li>✓ Advanced insights</li>
-              <li>✓ Export reports</li>
-            </ul>
-            <button className="pro-upgrade-btn" onClick={() => setShowAuthModal(true)}>
-              Upgrade
-            </button>
-          </div>
         </aside>
 
         {/* ── Main Dashboard Workspace ── */}
